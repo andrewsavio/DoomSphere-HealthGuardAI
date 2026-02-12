@@ -858,43 +858,96 @@ document.addEventListener("DOMContentLoaded", () => {
 
             trainingProgressFill.style.width = "0%";
             trainingProgressPct.textContent = "0%";
-            trainingStatusMessage.textContent = "Uploading dataset...";
+            trainingStatusMessage.textContent = "Preparing upload...";
 
-            try {
-                const formData = new FormData();
-                formData.append("description", datasetDescription.value);
-                formData.append("finding_label", datasetFindingLabel.value);
-                formData.append("epochs", selectedEpochs);
-                formData.append("is_folder", isDatasetFolder ? "true" : "false");
+            const formData = new FormData();
+            formData.append("description", datasetDescription.value);
+            formData.append("finding_label", datasetFindingLabel.value);
+            formData.append("epochs", selectedEpochs);
+            formData.append("is_folder", isDatasetFolder ? "true" : "false");
 
-                if (isDatasetFolder) {
-                    // Folder upload: append each file with its relative path
-                    selectedDatasetFiles.forEach((file) => {
-                        const relativePath = file.webkitRelativePath || file.name;
-                        formData.append("dataset_files", file, relativePath);
-                    });
-                    formData.append("folder_name", selectedDatasetFiles[0].webkitRelativePath.split("/")[0] || "dataset");
-                } else {
-                    // Single file upload (ZIP, TAR, etc.)
-                    formData.append("dataset", selectedDatasetFiles[0]);
-                }
+            if (isDatasetFolder) {
+                selectedDatasetFiles.forEach((file) => {
+                    const relativePath = file.webkitRelativePath || file.name;
+                    formData.append("dataset_files", file, relativePath);
+                });
+                formData.append("folder_name", selectedDatasetFiles[0].webkitRelativePath.split("/")[0] || "dataset");
+            } else {
+                formData.append("dataset", selectedDatasetFiles[0]);
+            }
 
-                // Animate upload progress
-                trainingProgressFill.style.width = "10%";
-                trainingProgressPct.textContent = "10%";
-                trainingStatusMessage.textContent = `Uploading ${isDatasetFolder ? selectedDatasetFiles.length + " files" : "archive"}...`;
+            const fileCount = isDatasetFolder ? selectedDatasetFiles.length : 1;
+            trainingStatusMessage.textContent = `Uploading ${fileCount} file${fileCount > 1 ? 's' : ''}...`;
 
-                const response = await fetch(`${API_BASE}/api/train`, {
-                    method: "POST",
-                    body: formData,
+            // Use XMLHttpRequest for real-time upload progress
+            const xhr = new XMLHttpRequest();
+
+            const uploadPromise = new Promise((resolve, reject) => {
+                // --- Upload progress (0% to 50% of the bar) ---
+                xhr.upload.addEventListener("progress", (e) => {
+                    if (e.lengthComputable) {
+                        const uploadPct = Math.round((e.loaded / e.total) * 50);
+                        trainingProgressFill.style.width = `${uploadPct}%`;
+                        trainingProgressPct.textContent = `${uploadPct}%`;
+
+                        const loadedMB = (e.loaded / 1048576).toFixed(1);
+                        const totalMB = (e.total / 1048576).toFixed(1);
+                        trainingStatusMessage.textContent = `Uploading: ${loadedMB} MB / ${totalMB} MB (${fileCount} files)`;
+                    }
                 });
 
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error || "Training failed");
-                }
+                xhr.upload.addEventListener("load", () => {
+                    trainingProgressFill.style.width = "50%";
+                    trainingProgressPct.textContent = "50%";
+                    trainingStatusMessage.textContent = "Upload complete! Server is processing & training...";
+                });
 
-                const result = await response.json();
+                xhr.addEventListener("load", () => {
+                    try {
+                        const result = JSON.parse(xhr.responseText);
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve(result);
+                        } else {
+                            reject(new Error(result.error || "Training failed"));
+                        }
+                    } catch (e) {
+                        reject(new Error("Invalid response from server"));
+                    }
+                });
+
+                xhr.addEventListener("error", () => {
+                    reject(new Error("Network error during upload"));
+                });
+
+                xhr.addEventListener("timeout", () => {
+                    reject(new Error("Upload timed out"));
+                });
+
+                xhr.open("POST", `${API_BASE}/api/train`);
+                xhr.timeout = 0; // No timeout for large uploads
+                xhr.send(formData);
+            });
+
+            // Poll training progress while waiting for server response
+            let trainingPollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await fetch(`${API_BASE}/api/train/status`);
+                    const status = await statusRes.json();
+                    if (status.is_training && status.progress > 0) {
+                        // Map server progress (0-100) to bar progress (50-100)
+                        const serverPct = 50 + Math.round(status.progress * 0.5);
+                        trainingProgressFill.style.width = `${serverPct}%`;
+                        trainingProgressPct.textContent = `${serverPct}%`;
+                        trainingStatusMessage.textContent = status.message || "Training...";
+                    }
+                } catch (e) {
+                    // Ignore poll errors
+                }
+            }, 1500);
+
+            try {
+                const result = await uploadPromise;
+                clearInterval(trainingPollInterval);
 
                 // Update progress to 100%
                 trainingProgressFill.style.width = "100%";
@@ -943,6 +996,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 trainingResultPanel.scrollIntoView({ behavior: "smooth", block: "center" });
 
             } catch (err) {
+                clearInterval(trainingPollInterval);
                 trainingProgressPanel.classList.add("hidden");
                 alert("Training Error: " + err.message);
                 console.error(err);

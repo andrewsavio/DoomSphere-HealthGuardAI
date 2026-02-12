@@ -341,7 +341,7 @@ class MedicalImageAnalyzer:
 
     def train_on_dataset(self, dataset_dir: str, description: str = "",
                          finding_label: str = "", epochs: int = 3,
-                         progress_callback=None) -> dict:
+                         progress_callback=None, cancel_flag=None) -> dict:
         """
         Train the model on a folder of images (e.g. from Kaggle).
 
@@ -351,6 +351,7 @@ class MedicalImageAnalyzer:
             finding_label: What finding these images represent (or subfolder names used)
             epochs: Number of training epochs
             progress_callback: Optional callback(progress_pct, message)
+            cancel_flag: Optional dict with 'cancel' key — if True, training stops early
 
         Returns:
             Training result dict with stats
@@ -461,7 +462,15 @@ class MedicalImageAnalyzer:
 
         self.model.classifier.train()
 
+        cancelled = False
+
         for epoch in range(epochs):
+            # Check for cancellation at start of each epoch
+            if cancel_flag and cancel_flag.get("cancel"):
+                cancelled = True
+                print(f"[HealthGuard AI] Training cancelled at epoch {epoch + 1}")
+                break
+
             epoch_loss = 0.0
             epoch_count = 0
 
@@ -505,7 +514,12 @@ class MedicalImageAnalyzer:
                     failed += 1
                     print(f"[HealthGuard AI] Skipping {img_path}: {e}")
 
-                # Progress update
+                # Progress update + cancellation check
+                if cancel_flag and cancel_flag.get("cancel"):
+                    cancelled = True
+                    print(f"[HealthGuard AI] Training cancelled during epoch {epoch + 1}")
+                    break
+
                 if progress_callback:
                     overall_progress = ((epoch * total_images + i + 1) /
                                         (epochs * total_images)) * 100
@@ -513,6 +527,10 @@ class MedicalImageAnalyzer:
                         round(overall_progress, 1),
                         f"Epoch {epoch + 1}/{epochs} — Image {i + 1}/{total_images}"
                     )
+
+            if cancelled:
+                batch_losses.append(round(epoch_loss / max(epoch_count, 1), 4))
+                break
 
             avg_epoch_loss = epoch_loss / max(epoch_count, 1)
             batch_losses.append(round(avg_epoch_loss, 4))

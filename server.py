@@ -77,6 +77,7 @@ training_state = {
     "progress": 0,
     "message": "",
     "result": None,
+    "cancel": False,  # Flag to cancel an in-progress training
 }
 
 
@@ -351,8 +352,16 @@ def train_on_dataset():
       - epochs: int (default 3)
       - is_folder: "true" or "false"
     """
+    # If a training session is already running, cancel it and wait for it to stop
     if training_state["is_training"]:
-        return jsonify({"error": "A training session is already in progress."}), 409
+        print("[HealthGuard AI] Cancelling previous training session...")
+        training_state["cancel"] = True
+        import time as _time
+        for _ in range(20):  # Wait up to 10 seconds for it to stop
+            _time.sleep(0.5)
+            if not training_state["is_training"]:
+                break
+        training_state["cancel"] = False
 
     is_folder = request.form.get("is_folder", "false") == "true"
     description = request.form.get("description", "")
@@ -461,14 +470,16 @@ def train_on_dataset():
         training_state["progress"] = 0
         training_state["message"] = "Preparing dataset..."
         training_state["result"] = None
+        training_state["cancel"] = False
 
-        # Run training (blocking for simplicity, could be threaded for large datasets)
+        # Run training (passes training_state as cancel_flag for cancellation support)
         result = analyzer.train_on_dataset(
             dataset_dir=actual_dir,
             description=description,
             finding_label=finding_label,
             epochs=epochs,
             progress_callback=progress_callback,
+            cancel_flag=training_state,
         )
 
         training_state["is_training"] = False
