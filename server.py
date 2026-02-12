@@ -176,6 +176,7 @@ def analyze_scan():
                 "findings": analysis_result["findings"],
                 "overall_severity": analysis_result["overall_severity"],
                 "primary_finding": analysis_result["primary_finding"],
+                "description": analysis_result["findings"][0].get("description", ""),
                 "model_info": analysis_result["model_info"],
             },
             "images": {
@@ -306,6 +307,7 @@ def reanalyze_scan():
                 "findings": analysis_result["findings"],
                 "overall_severity": analysis_result["overall_severity"],
                 "primary_finding": analysis_result["primary_finding"],
+                "description": analysis_result["findings"][0].get("description", ""),
                 "model_info": analysis_result["model_info"],
             },
             "images": {
@@ -368,8 +370,21 @@ def train_on_dataset():
     epochs = int(request.form.get("epochs", 3))
     epochs = min(max(epochs, 1), 20)  # Clamp between 1 and 20
 
-    # Create unique temp directories for this training session
-    dataset_dir = tempfile.mkdtemp(prefix="hg_dataset_")
+    # Get temp location preference (default: system)
+    temp_location = request.form.get("temp_location", "system")
+    
+    if temp_location == "project":
+        # Use a local 'temp_datasets' folder in the project directory
+        # This helps avoid MAX_PATH issues on Windows vs deep AppData paths
+        project_temp_root = os.path.join(os.getcwd(), "temp_datasets")
+        os.makedirs(project_temp_root, exist_ok=True)
+        dataset_dir = tempfile.mkdtemp(prefix="hg_dataset_", dir=project_temp_root)
+        print(f"[HealthGuard AI] Using PROJECT temp directory: {dataset_dir}")
+    else:
+        # Use system temp directory (default)
+        dataset_dir = tempfile.mkdtemp(prefix="hg_dataset_")
+        print(f"[HealthGuard AI] Using SYSTEM temp directory: {dataset_dir}")
+
     extract_dir = os.path.join(dataset_dir, "extracted")
     os.makedirs(extract_dir, exist_ok=True)
 

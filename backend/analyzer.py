@@ -42,21 +42,130 @@ MEDICAL_FINDINGS = [
 ]
 
 FINDING_DESCRIPTIONS = {
-    "Normal - No significant findings": "The scan appears within normal limits. No obvious pathological findings are detected. Regular follow-up is recommended as per standard medical guidelines.",
-    "Potential Opacity / Mass": "An area of increased density/opacity has been detected which may indicate a mass, tumor, consolidation, or other space-occupying lesion. Further evaluation with contrast imaging is recommended.",
-    "Calcification Detected": "Calcified deposits have been identified. These may be benign (such as vascular calcifications) or may require further investigation depending on location and morphology.",
-    "Fracture Indication": "Features suggestive of a fracture line or cortical disruption have been detected. Clinical correlation and possibly additional views are recommended.",
-    "Soft Tissue Abnormality": "Abnormal soft tissue changes detected, which may include swelling, asymmetry, or density variations. Further clinical evaluation recommended.",
-    "Fluid Accumulation": "Signs suggestive of fluid collection detected. This may indicate effusion, edema, or other fluid-related pathology.",
-    "Structural Anomaly": "An anatomical structural variation or anomaly has been identified. This may be a normal variant or may require further evaluation.",
-    "Inflammation / Infection Signs": "Features suggestive of inflammatory or infectious process detected, including possible tissue changes and reactive patterns.",
-    "Degenerative Changes": "Signs of degenerative changes are noted, which may include joint space narrowing, osteophyte formation, or disc changes.",
-    "Vascular Abnormality": "Potential vascular abnormality detected, which may include vessel dilation, stenosis, or anomalous vascular patterns.",
-    "Foreign Body Detected": "A radio-opaque or distinct foreign body has been identified in the scan field.",
-    "Post-surgical Changes": "Changes consistent with prior surgical intervention are noted, including possible hardware, clips, or post-operative tissue changes.",
-    "Lymph Node Enlargement": "Potentially enlarged lymph nodes detected. Clinical correlation and possible biopsy may be warranted.",
-    "Organ Enlargement": "Signs of organ enlargement (organomegaly) detected. Further imaging and clinical evaluation recommended.",
-    "Bone Density Variation": "Variations in bone density detected, which may suggest osteopenia, osteoporosis, or sclerotic changes.",
+    "Normal - No significant findings": (
+        "<strong>Condition:</strong> Normal Scan<br>"
+        "The imaging study appears within normal limits. No obvious pathological findings, fractures, or abnormalities are detected in the visualized regions.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "A 'Normal' result is a positive outcome, indicating that the specific structures examined do not show signs of disease or injury detectable by this scan. However, it does not rule out all conditions, especially those that may not be visible on this specific imaging modality (e.g., soft tissue injuries on X-ray).<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Regular follow-up is recommended as per standard medical guidelines. If symptoms persist despite a normal scan, consult your physician for further evaluation or alternative imaging methods."
+    ),
+    "Potential Opacity / Mass": (
+        "<strong>Condition:</strong> Potential Opacity / Mass Detected<br>"
+        "An area of increased density or opacity has been identified. In medical imaging, this often represents a region where tissue is more dense than surrounding areas, which could indicate a mass, tumor, consolidation (fluid/infection), or benign nodule.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Opacities in the lungs can be caused by pneumonia, atelectasis (collapsed lung), or neoplasms. In other tissues, masses may be benign (cysts, fibromas) or malignant.<br><br>"
+        "<strong>Potential Causes:</strong><br>"
+        "<ul><li>Infection (Pneumonia, Abscess)</li><li>Benign Growth (Cyst, Nodule)</li><li>Malignancy (Tumor)</li><li>Scar Tissue</li></ul>"
+        "<strong>Next Steps:</strong><br>"
+        "Further evaluation with higher-resolution imaging (such as CT with contrast) is strongly recommended to characterize the shape, size, and borders of the opacity. A biopsy may be necessary if malignancy is suspected."
+    ),
+    "Calcification Detected": (
+        "<strong>Condition:</strong> Calcification Detected<br>"
+        "Calcified deposits generally appear as bright white spots on X-rays and CT scans. This indicates the hardening of tissue due to calcium salt deposition.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Calcifications are common and often benign. They can occur in arteries (atherosclerosis), old healed infections (granulomas), or within soft tissues.<br><br>"
+        "<strong>Potential Causes:</strong><br>"
+        "<ul><li>Vascular Calcification (Aging, Diabetes)</li><li>Healed Infection (TB, Histoplasmosis)</li><li>Benign Bone Islands</li><li>Calculi (Stones in Kidney/Gallbladder)</li></ul>"
+        "<strong>Next Steps:</strong><br>"
+        "Determine if the calcification is benign or pathologic based on location. Vascular calcifications may suggest cardiovascular risk. No immediate action may be needed for benign findings, but clinical correlation is advised."
+    ),
+    "Fracture Indication": (
+        "<strong>Condition:</strong> Fracture Indication<br>"
+        "Features suggestive of a bone fracture have been detected. The integrity of the bone cortex appears disrupted, indicating a break or crack.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Fractures can range from hairline cracks (stress fractures) to complete breaks (comminuted, displaced). The surrounding soft tissue may also show swelling.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "<strong>IMMEDIATE medical attention is recommended.</strong> Immobilization of the affected area is crucial to prevent further injury. An orthopedist should evaluate the need for casting, splinting, or surgical intervention."
+    ),
+    "Soft Tissue Abnormality": (
+        "<strong>Condition:</strong> Soft Tissue Abnormality<br>"
+        "Abnormal changes in the soft tissues (muscles, fat, skin, fascia) have been detected. This may appear as asymmetry, swelling, or unexpected density variations.<br><br>"
+        "<strong>Potential Causes:</strong><br>"
+        "<ul><li>Trauma / Hematoma</li><li>Cellulitis / Infection</li><li>Lipoma or other soft tissue masses</li><li>Edema (Swelling)</li></ul>"
+        "<strong>Next Steps:</strong><br>"
+        "Clinical physical examination is essential to correlate with imaging findings. Ultrasound or MRI may be superior for detailed soft tissue evaluation."
+    ),
+    "Fluid Accumulation": (
+        "<strong>Condition:</strong> Fluid Accumulation (Effusion/Edema)<br>"
+        "Signs suggestive of abnormal fluid collection have been noted. In the chest, this could be a pleural effusion; in joints, an effusion; or in soft tissues, edema.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Fluid appears dense on X-rays and can blunt normal sharp angles (e.g., costophrenic angles in lungs). It often signals an underlying process like heart failure, infection, or trauma.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Identify the underlying cause. Diuretics may be used for heart failure, or drainage (thoracentesis/aspiration) may be required for large effusions to analyze the fluid and relieve pressure."
+    ),
+    "Structural Anomaly": (
+        "<strong>Condition:</strong> Structural Anomaly<br>"
+        "An anatomical variation or structural deviation has been identified. This refers to the shape, position, or formation of an organ or bone that differs from the typical anatomy.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Many structural anomalies are congenital (present at birth) and benign (e.g., Scoliosis, dextrocardia). Others may be acquired due to disease or previous surgery.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Determine if the anomaly causes symptoms or functional impairment. If asymptomatic, it may be an incidental finding requiring no treatment."
+    ),
+    "Inflammation / Infection Signs": (
+        "<strong>Condition:</strong> Signs of Inflammation or Infection<br>"
+        "Imaging features suggest an active inflammatory or infectious process. This often presents as haziness, consolidation, or reactive tissue changes.<br><br>"
+        "<strong>Potential Causes:</strong><br>"
+        "<ul><li>Bacterial / Viral Infection</li><li>Autoimmune Reaction</li><li>Abscess Formation</li></ul>"
+        "<strong>Next Steps:</strong><br>"
+        "Clinical correlation with symptoms (fever, pain, redness) and lab work (WBC count, CRP) is vital. Antibiotics or anti-inflammatory medication may be indicated."
+    ),
+    "Degenerative Changes": (
+        "<strong>Condition:</strong> Degenerative Changes (Osteoarthritis/Spondylosis)<br>"
+        "Signs of 'wear and tear' on the bones and joints are evident. Common features include joint space narrowing, osteophytes (bone spurs), and sclerosis.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "This is common in aging populations. It can cause pain, stiffness, and reduced range of motion, though some cases are asymptomatic.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Management is typically conservative: Physical therapy, pain management, and lifestyle modifications. severe cases may require surgical consultation."
+    ),
+    "Vascular Abnormality": (
+        "<strong>Condition:</strong> Vascular Abnormality<br>"
+        "Potential abnormalities in the blood vessels have been detected. This could range from aortic enlargement (aneurysm) to calcified arteries.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Vascular health is critical. An enlarged aorta may pose a risk of rupture. Calcified vessels indicate atherosclerosis and cardiovascular risk.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Cardiovascular evaluation is recommended. Control of risk factors (blood pressure, cholesterol) is essential."
+    ),
+    "Foreign Body Detected": (
+        "<strong>Condition:</strong> Foreign Body Detected<br>"
+        "A distinct object that is not native to the body has been identified. It appears radio-opaque (bright white) on X-rays.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "This could be medical hardware (pacemaker, clips), a swallowed object (coin, battery), or a result of penetrating trauma (glass, metal fragment).<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Verify history: Is this known medical hardware? If recent trauma or ingestion, removal may be necessary depending on location and material."
+    ),
+    "Post-surgical Changes": (
+        "<strong>Condition:</strong> Post-surgical Changes<br>"
+        "The scan shows evidence of prior surgical intervention. This may include metallic hardware (screws, plates), clips, sutures, or altered anatomy.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "This is a descriptive finding. The key is to verify if the hardware is intact and in proper position, and that there are no complications like loosening or infection.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Routine monitoring. If pain is present at the surgical site, evaluation for hardware failure or infection is warranted."
+    ),
+    "Lymph Node Enlargement": (
+        "<strong>Condition:</strong> Lymphadenopathy (Enlarged Lymph Nodes)<br>"
+        "Lymph nodes in the scanned region appear larger than normal. This is often a sign that the immune system is active.<br><br>"
+        "<strong>Potential Causes:</strong><br>"
+        "<ul><li>Infection (local or systemic)</li><li>Inflammation</li><li>Malignancy (Lymphoma or metastatic cancer)</li></ul>"
+        "<strong>Next Steps:</strong><br>"
+        "Don't panic—infection is the most common cause. However, persistent enlargement requires follow-up. A biopsy may be performed if malignancy is suspected."
+    ),
+    "Organ Enlargement": (
+        "<strong>Condition:</strong> Organomegaly (Organ Enlargement)<br>"
+        "An organ (such as the heart, liver, or spleen) appears larger than expected dimensions.<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Cardiomegaly (enlarged heart) may suggest heart failure or cardiomyopathy. Hepatomegaly (enlarged liver) may suggest fatty liver, congestion, or hepatitis.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "Evaluate function of the specific organ involved (Echocardiogram for heart; LFTs/Ultrasound for liver). Treat the underlying cause."
+    ),
+    "Bone Density Variation": (
+        "<strong>Condition:</strong> Bone Density Variation<br>"
+        "The density of the bone appears abnormal. It may be too low (osteopenia/lytic lesion) or too high (sclerosis/blastic lesion).<br><br>"
+        "<strong>Clinical Context:</strong><br>"
+        "Decreased density increases fracture risk (Osteoporosis). Focal lytic lesions can be due to cysts or tumors. Sclerosis is often seen in healing, arthritis, or certain bone islands.<br><br>"
+        "<strong>Next Steps:</strong><br>"
+        "DEXA scan for osteoporosis screening. MRI or CT may be needed to characterize focal lesions."
+    ),
 }
 
 SEVERITY_LEVELS = {
@@ -721,11 +830,13 @@ class MedicalImageAnalyzer:
                 "severity": "low",
             })
 
-        # Generate GradCAM heatmap for top prediction
-        primary_idx = top_indices[0]
-        heatmap_path, annotated_path = self._generate_heatmap(
-            image, input_tensor, primary_idx, output_dir
-        )
+        # Generate GradCAM heatmap for top prediction - DISABLED
+        # primary_idx = top_indices[0]
+        # heatmap_path, annotated_path = self._generate_heatmap(
+        #     image, input_tensor, primary_idx, output_dir
+        # )
+        heatmap_path = None
+        annotated_path = None
 
         # Overall severity
         severities = [f["severity"] for f in findings]

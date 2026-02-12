@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const customFindingWrapper = document.getElementById("customFindingWrapper");
     const customFindingInput = document.getElementById("customFindingInput");
     const feedbackDescription = document.getElementById("feedbackDescription");
-    const feedbackScanTag = document.getElementById("feedbackScanTag");
+    // feedbackScanTag removed
     const severityButtons = document.getElementById("severityButtons");
     const feedbackNotes = document.getElementById("feedbackNotes");
     const submitFeedbackBtn = document.getElementById("submitFeedbackBtn");
@@ -281,10 +281,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const scanType = data.scan_type;
         currentScanType = scanType.scan_type || "Unknown";
         document.getElementById("scanTypeValue").textContent = scanType.scan_type;
-        document.getElementById("scanTypeConf").textContent = `${scanType.confidence}% confidence`;
+        // scanTypeConf removed
 
-        // Update scan type in feedback panel
-        feedbackScanTag.textContent = scanType.scan_type;
+        // Update scan type in feedback panel - handled by editable input now
+        // feedbackScanTag removed
 
         // Severity
         const severity = data.analysis.overall_severity;
@@ -297,14 +297,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Primary Finding
         document.getElementById("primaryFindingValue").textContent = data.analysis.primary_finding;
+        // 2. Primary Finding Description (Detailed Report)
+        // We now use innerHTML because the backend sends formatted HTML
+        // 2. Primary Finding Description (Detailed Report)
+        // Description is already handled in the findingsList loop below
+
+        // 3. Scan Type (Auto-fill but allow editing)
+        const feedbackScanTypeInput = document.getElementById("feedbackScanTypeInput");
+        if (feedbackScanTypeInput) {
+            feedbackScanTypeInput.value = scanType.scan_type;
+        }
 
         // Model
         document.getElementById("modelValue").textContent = data.analysis.model_info.name;
         document.getElementById("modelDevice").textContent = `Device: ${data.analysis.model_info.device}`;
 
-        // Images
-        document.getElementById("heatmapImage").src = data.images.heatmap;
-        document.getElementById("annotatedImage").src = data.images.annotated;
+        // Images section removed per user request
 
         // Findings List
         const findingsList = document.getElementById("findingsList");
@@ -452,6 +460,11 @@ document.addEventListener("DOMContentLoaded", () => {
         feedbackDescription.value = "";
         feedbackForm.classList.remove("hidden");
         feedbackSuccess.classList.add("hidden");
+        // Reset feedbackScanTypeInput if it exists
+        const feedbackScanTypeInput = document.getElementById("feedbackScanTypeInput");
+        if (feedbackScanTypeInput) {
+            feedbackScanTypeInput.value = "";
+        }
     }
 
     // ---------- Submit Feedback ----------
@@ -482,20 +495,34 @@ document.addEventListener("DOMContentLoaded", () => {
         submitFeedbackBtn.disabled = true;
         submitFeedbackBtn.querySelector("span").textContent = "Training AI Model...";
 
+        // Determine final finding
+        let finalFinding = correctFinding.value;
+        let isCustom = false;
+        if (finalFinding === "__other__") {
+            finalFinding = customFindingInput.value.trim();
+            isCustom = true;
+        }
+
+        // Get edited scan type
+        const feedbackScanTypeInput = document.getElementById("feedbackScanTypeInput");
+        const editedScanType = feedbackScanTypeInput ? feedbackScanTypeInput.value : "Unknown";
+
+        // Prepare payload
+        const payload = {
+            session_id: currentSessionId,
+            rating: selectedRating,
+            correct_finding: finalFinding,
+            severity_correction: selectedSeverity,
+            scan_type: editedScanType, // Send the edited scan type
+            notes: feedbackNotes.value,
+            description: feedbackDescription.value,
+            custom_finding_is_new: isCustom,
+        };
         try {
             const response = await fetch(`${API_BASE}/api/feedback`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    session_id: currentSessionId,
-                    correct_finding: correctFinding.value,
-                    custom_finding: customFindingInput.value.trim(),
-                    severity_correction: selectedSeverity,
-                    notes: feedbackNotes.value,
-                    description: feedbackDescription.value,
-                    rating: selectedRating,
-                    scan_type: currentScanType,
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!response.ok) {
@@ -865,6 +892,10 @@ document.addEventListener("DOMContentLoaded", () => {
             formData.append("finding_label", datasetFindingLabel.value);
             formData.append("epochs", selectedEpochs);
             formData.append("is_folder", isDatasetFolder ? "true" : "false");
+
+            // Get selected temp location
+            const tempLocation = document.querySelector('input[name="tempLocation"]:checked')?.value || "system";
+            formData.append("temp_location", tempLocation);
 
             if (isDatasetFolder) {
                 selectedDatasetFiles.forEach((file) => {

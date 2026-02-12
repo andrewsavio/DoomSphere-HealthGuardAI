@@ -1108,7 +1108,7 @@ img {
 /* Summary Cards */
 .summary-cards {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
 }
 
@@ -1370,10 +1370,30 @@ img {
 }
 
 .finding-description {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
-    line-height: 1.5;
-    margin-bottom: 6px;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.finding-description strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.finding-description ul {
+    margin: 8px 0 8px 20px;
+    list-style-type: disc;
+}
+
+.finding-description li {
+    margin-bottom: 4px;
+}
+
+.finding-description br {
+    display: block;
+    margin-bottom: 8px;
+    content: "";
 }
 
 .finding-confidence {

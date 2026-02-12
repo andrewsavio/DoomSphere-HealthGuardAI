@@ -286,7 +286,7 @@
                     <div class="summary-info">
                         <span class="summary-label">Scan Type Detected</span>
                         <span class="summary-value" id="scanTypeValue">—</span>
-                        <span class="summary-conf" id="scanTypeConf">—</span>
+                        <!-- Removed Probability Score -->
                     </div>
                 </div>
                 <div class="summary-card severity-card" id="severityCard">
@@ -298,260 +298,234 @@
                         <span class="summary-value" id="severityValue">—</span>
                     </div>
                 </div>
-                <div class="summary-card finding-card-summary" id="primaryFindingCard">
-                    <div class="summary-icon">
-                        <i data-lucide="stethoscope"></i>
-                    </div>
-                    <div class="summary-info">
-                        <span class="summary-label">Primary Finding</span>
-                        <span class="summary-value" id="primaryFindingValue">—</span>
-                    </div>
-                </div>
-                <div class="summary-card model-card">
-                    <div class="summary-icon">
-                        <i data-lucide="cpu"></i>
-                    </div>
-                    <div class="summary-info">
-                        <span class="summary-label">AI Model</span>
-                        <span class="summary-value" id="modelValue">—</span>
-                        <span class="summary-conf" id="modelDevice">—</span>
-                    </div>
-                </div>
+                <!-- Removed Primary Finding Box -->
             </div>
-
-            <!-- Image Analysis -->
-            <div class="analysis-images">
-                <div class="analysis-image-card">
-                    <div class="image-card-header">
-                        <i data-lucide="flame"></i>
-                        <h3>GradCAM Heatmap</h3>
-                    </div>
-                    <p class="image-card-desc">Warm colors indicate regions most influential in the AI's prediction.</p>
-                    <div class="image-container">
-                        <img id="heatmapImage" alt="GradCAM Heatmap">
-                    </div>
-                </div>
-                <div class="analysis-image-card">
-                    <div class="image-card-header">
-                        <i data-lucide="box-select"></i>
-                        <h3>Annotated Regions</h3>
-                    </div>
-                    <p class="image-card-desc">Green boxes and yellow contours mark AI-identified regions of interest.
-                    </p>
-                    <div class="image-container">
-                        <img id="annotatedImage" alt="Annotated Regions">
-                    </div>
-                </div>
+            <div class="summary-info">
+                <span class="summary-label">Primary Finding</span>
+                <span class="summary-value" id="primaryFindingValue">—</span>
             </div>
-
-            <!-- Detailed Findings -->
-            <div class="findings-panel">
-                <div class="findings-header">
-                    <h3><i data-lucide="clipboard-list"></i> Detailed Findings</h3>
-                </div>
-                <div class="findings-list" id="findingsList">
-                    <!-- Populated by JS -->
-                </div>
+        </div>
+        <div class="summary-card model-card">
+            <div class="summary-icon">
+                <i data-lucide="cpu"></i>
             </div>
-
-            <!-- Scan Type Breakdown -->
-            <div class="scan-breakdown-panel">
-                <div class="findings-header">
-                    <h3><i data-lucide="bar-chart-3"></i> Scan Type Probability</h3>
-                </div>
-                <div class="scan-type-bars" id="scanTypeBars">
-                    <!-- Populated by JS -->
-                </div>
+            <div class="summary-info">
+                <span class="summary-label">AI Model</span>
+                <span class="summary-value" id="modelValue">—</span>
+                <span class="summary-conf" id="modelDevice">—</span>
             </div>
+        </div>
+        </div>
 
-            <!-- Download Section -->
-            <div class="download-panel">
-                <div class="download-content">
-                    <div class="download-icon">
-                        <i data-lucide="file-text"></i>
-                    </div>
-                    <div class="download-info">
-                        <h3>Download Full Report</h3>
-                        <p>Get a comprehensive PDF report with all findings, annotated images, heatmaps, and medical
-                            disclaimer.</p>
-                    </div>
-                    <button class="btn btn-primary btn-lg" id="downloadPdfBtn">
-                        <i data-lucide="download"></i>
-                        Download PDF Report
-                    </button>
-                </div>
+        <!-- Image Analysis Removed -->
+
+        <!-- Detailed Findings -->
+        <div class="findings-panel">
+            <div class="findings-header">
+                <h3><i data-lucide="clipboard-list"></i> Detailed Findings</h3>
             </div>
-
-            <!-- Feedback Panel -->
-            <div class="feedback-panel" id="feedbackPanel">
-                <div class="feedback-header">
-                    <div class="feedback-header-icon">
-                        <i data-lucide="message-square-plus"></i>
-                    </div>
-                    <div>
-                        <h3>Professional Feedback & AI Training</h3>
-                        <p>Help the AI learn — provide your expert assessment. The model uses reinforcement learning to
-                            improve from your feedback.</p>
-                    </div>
-                </div>
-
-                <div class="feedback-form" id="feedbackForm">
-                    <!-- Detected Scan Type (read-only) -->
-                    <div class="feedback-field">
-                        <label class="feedback-label">
-                            <i data-lucide="scan"></i>
-                            Detected Scan Type
-                        </label>
-                        <div class="scan-type-display" id="feedbackScanType">
-                            <span class="scan-type-tag" id="feedbackScanTag">—</span>
-                        </div>
-                    </div>
-
-                    <!-- Description / About the Dataset -->
-                    <div class="feedback-field">
-                        <label class="feedback-label" for="feedbackDescription">
-                            <i data-lucide="file-text"></i>
-                            Description / About the Dataset
-                        </label>
-                        <textarea class="feedback-textarea" id="feedbackDescription"
-                            placeholder="Describe the medical scan, dataset origin, imaging conditions, patient demographics, or any relevant clinical context..."
-                            rows="3"></textarea>
-                    </div>
-
-                    <!-- Professional Notes -->
-                    <div class="feedback-field">
-                        <label class="feedback-label" for="feedbackNotes">
-                            <i data-lucide="file-edit"></i>
-                            Professional Notes / Observations
-                        </label>
-                        <textarea class="feedback-textarea" id="feedbackNotes"
-                            placeholder="Provide detailed observations, corrections, or additional findings that the AI missed. Your expertise helps the model learn and improve..."
-                            rows="3"></textarea>
-                    </div>
-
-                    <!-- Star Rating -->
-                    <div class="feedback-field">
-                        <label class="feedback-label">
-                            <i data-lucide="star"></i>
-                            How accurate was the AI prediction?
-                        </label>
-                        <div class="star-rating" id="starRating">
-                            <button class="star-btn" data-rating="1" title="Very Inaccurate">
-                                <i data-lucide="star"></i>
-                            </button>
-                            <button class="star-btn" data-rating="2" title="Somewhat Inaccurate">
-                                <i data-lucide="star"></i>
-                            </button>
-                            <button class="star-btn" data-rating="3" title="Partially Accurate">
-                                <i data-lucide="star"></i>
-                            </button>
-                            <button class="star-btn" data-rating="4" title="Mostly Accurate">
-                                <i data-lucide="star"></i>
-                            </button>
-                            <button class="star-btn" data-rating="5" title="Very Accurate">
-                                <i data-lucide="star"></i>
-                            </button>
-                            <span class="rating-text" id="ratingText">Select a rating</span>
-                        </div>
-                    </div>
-
-                    <!-- Correct Finding Dropdown with Other option -->
-                    <div class="feedback-field">
-                        <label class="feedback-label" for="correctFinding">
-                            <i data-lucide="stethoscope"></i>
-                            Correct Medical Finding
-                        </label>
-                        <select class="feedback-select" id="correctFinding">
-                            <option value="">— Select the correct medical finding —</option>
-                            <option value="Normal - No significant findings">Normal - No significant findings</option>
-                            <option value="Potential Opacity / Mass">Potential Opacity / Mass</option>
-                            <option value="Calcification Detected">Calcification Detected</option>
-                            <option value="Fracture Indication">Fracture Indication</option>
-                            <option value="Soft Tissue Abnormality">Soft Tissue Abnormality</option>
-                            <option value="Fluid Accumulation">Fluid Accumulation</option>
-                            <option value="Structural Anomaly">Structural Anomaly</option>
-                            <option value="Inflammation / Infection Signs">Inflammation / Infection Signs</option>
-                            <option value="Degenerative Changes">Degenerative Changes</option>
-                            <option value="Vascular Abnormality">Vascular Abnormality</option>
-                            <option value="Foreign Body Detected">Foreign Body Detected</option>
-                            <option value="Post-surgical Changes">Post-surgical Changes</option>
-                            <option value="Lymph Node Enlargement">Lymph Node Enlargement</option>
-                            <option value="Organ Enlargement">Organ Enlargement</option>
-                            <option value="Bone Density Variation">Bone Density Variation</option>
-                            <option value="__other__">🔬 Other — Type your own finding...</option>
-                        </select>
-                        <!-- Custom finding text input (shown when 'Other' is selected) -->
-                        <div class="custom-finding-input hidden" id="customFindingWrapper">
-                            <input type="text" class="feedback-text-input" id="customFindingInput"
-                                placeholder="Type the medical finding name (e.g., Pleural Effusion, Pneumothorax)..." />
-                            <p class="custom-finding-hint">
-                                <i data-lucide="info"></i>
-                                The AI will learn this new finding through reinforcement learning.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Severity Correction -->
-                    <div class="feedback-field">
-                        <label class="feedback-label">
-                            <i data-lucide="alert-triangle"></i>
-                            Correct severity level
-                        </label>
-                        <div class="severity-buttons" id="severityButtons">
-                            <button class="severity-btn severity-btn-low" data-severity="low">
-                                <span class="severity-dot"></span>
-                                Low
-                            </button>
-                            <button class="severity-btn severity-btn-medium" data-severity="medium">
-                                <span class="severity-dot"></span>
-                                Medium
-                            </button>
-                            <button class="severity-btn severity-btn-high" data-severity="high">
-                                <span class="severity-dot"></span>
-                                High
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Submit Feedback -->
-                    <button class="btn btn-primary btn-lg feedback-submit-btn" id="submitFeedbackBtn">
-                        <i data-lucide="brain"></i>
-                        <span>Submit Feedback & Train AI</span>
-                        <div class="btn-shimmer"></div>
-                    </button>
-                </div>
-
-                <!-- Feedback Success State -->
-                <div class="feedback-success hidden" id="feedbackSuccess">
-                    <div class="feedback-success-icon">
-                        <i data-lucide="check-circle-2"></i>
-                    </div>
-                    <h4>Feedback Applied Successfully!</h4>
-                    <p class="feedback-success-message" id="feedbackMessage"></p>
-                    <div class="feedback-stats-mini" id="feedbackStatsMini">
-                        <!-- Populated by JS -->
-                    </div>
-                    <div class="feedback-actions">
-                        <button class="btn btn-primary btn-lg" id="reanalyzeBtn">
-                            <i data-lucide="refresh-cw"></i>
-                            Re-Analyze with Updated Model
-                            <div class="btn-shimmer"></div>
-                        </button>
-                        <button class="btn btn-ghost" id="addMoreFeedbackBtn">
-                            <i data-lucide="message-square-plus"></i>
-                            Add More Feedback
-                        </button>
-                    </div>
-                </div>
+            <div class="findings-list" id="findingsList">
+                <!-- Populated by JS -->
             </div>
+        </div>
 
-            <!-- New Scan Button -->
-            <div class="new-scan-area">
-                <button class="btn btn-ghost btn-lg" id="newScanBtn">
-                    <i data-lucide="rotate-ccw"></i>
-                    Analyze Another Scan
+        <!-- Scan Type Breakdown -->
+        <div class="scan-breakdown-panel">
+            <div class="findings-header">
+                <h3><i data-lucide="bar-chart-3"></i> Scan Type Probability</h3>
+            </div>
+            <div class="scan-type-bars" id="scanTypeBars">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Download Section -->
+        <div class="download-panel">
+            <div class="download-content">
+                <div class="download-icon">
+                    <i data-lucide="file-text"></i>
+                </div>
+                <div class="download-info">
+                    <h3>Download Full Report</h3>
+                    <p>Get a comprehensive PDF report with all findings, annotated images, heatmaps, and medical
+                        disclaimer.</p>
+                </div>
+                <button class="btn btn-primary btn-lg" id="downloadPdfBtn">
+                    <i data-lucide="download"></i>
+                    Download PDF Report
                 </button>
             </div>
+        </div>
+
+        <!-- Feedback Panel -->
+        <div class="feedback-panel" id="feedbackPanel">
+            <div class="feedback-header">
+                <div class="feedback-header-icon">
+                    <i data-lucide="message-square-plus"></i>
+                </div>
+                <div>
+                    <h3>Professional Feedback & AI Training</h3>
+                    <p>Help the AI learn — provide your expert assessment. The model uses reinforcement learning to
+                        improve from your feedback.</p>
+                </div>
+            </div>
+
+            <div class="feedback-form" id="feedbackForm">
+                <!-- Detected Scan Type (read-only) -->
+                <div class="feedback-field">
+                    <label class="feedback-label">
+                        <i data-lucide="scan"></i>
+                        detected Scan Type (Editable)
+                    </label>
+                    <input type="text" class="feedback-text-input" id="feedbackScanTypeInput"
+                        placeholder="e.g., Chest X-Ray, MRI Brain, CT Abdomen" value="">
+                </div>
+
+                <!-- Description / About the Dataset -->
+                <div class="feedback-field">
+                    <label class="feedback-label" for="feedbackDescription">
+                        <i data-lucide="file-text"></i>
+                        Description / About the Dataset
+                    </label>
+                    <textarea class="feedback-textarea" id="feedbackDescription"
+                        placeholder="Describe the medical scan, dataset origin, imaging conditions, patient demographics, or any relevant clinical context..."
+                        rows="3"></textarea>
+                </div>
+
+                <!-- Professional Notes -->
+                <div class="feedback-field">
+                    <label class="feedback-label" for="feedbackNotes">
+                        <i data-lucide="file-edit"></i>
+                        Professional Notes / Observations
+                    </label>
+                    <textarea class="feedback-textarea" id="feedbackNotes"
+                        placeholder="Provide detailed observations, corrections, or additional findings that the AI missed. Your expertise helps the model learn and improve..."
+                        rows="3"></textarea>
+                </div>
+
+                <!-- Star Rating -->
+                <div class="feedback-field">
+                    <label class="feedback-label">
+                        <i data-lucide="star"></i>
+                        How accurate was the AI prediction?
+                    </label>
+                    <div class="star-rating" id="starRating">
+                        <button class="star-btn" data-rating="1" title="Very Inaccurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="2" title="Somewhat Inaccurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="3" title="Partially Accurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="4" title="Mostly Accurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="5" title="Very Accurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <span class="rating-text" id="ratingText">Select a rating</span>
+                    </div>
+                </div>
+
+                <!-- Correct Finding Dropdown with Other option -->
+                <div class="feedback-field">
+                    <label class="feedback-label" for="correctFinding">
+                        <i data-lucide="stethoscope"></i>
+                        Correct Medical Finding
+                    </label>
+                    <select class="feedback-select" id="correctFinding">
+                        <option value="">— Select the correct medical finding —</option>
+                        <option value="Normal - No significant findings">Normal - No significant findings</option>
+                        <option value="Potential Opacity / Mass">Potential Opacity / Mass</option>
+                        <option value="Calcification Detected">Calcification Detected</option>
+                        <option value="Fracture Indication">Fracture Indication</option>
+                        <option value="Soft Tissue Abnormality">Soft Tissue Abnormality</option>
+                        <option value="Fluid Accumulation">Fluid Accumulation</option>
+                        <option value="Structural Anomaly">Structural Anomaly</option>
+                        <option value="Inflammation / Infection Signs">Inflammation / Infection Signs</option>
+                        <option value="Degenerative Changes">Degenerative Changes</option>
+                        <option value="Vascular Abnormality">Vascular Abnormality</option>
+                        <option value="Foreign Body Detected">Foreign Body Detected</option>
+                        <option value="Post-surgical Changes">Post-surgical Changes</option>
+                        <option value="Lymph Node Enlargement">Lymph Node Enlargement</option>
+                        <option value="Organ Enlargement">Organ Enlargement</option>
+                        <option value="Bone Density Variation">Bone Density Variation</option>
+                        <option value="__other__">🔬 Other — Type your own finding...</option>
+                    </select>
+                    <!-- Custom finding text input (shown when 'Other' is selected) -->
+                    <div class="custom-finding-input hidden" id="customFindingWrapper">
+                        <input type="text" class="feedback-text-input" id="customFindingInput"
+                            placeholder="Type the medical finding name (e.g., Pleural Effusion, Pneumothorax)..." />
+                        <p class="custom-finding-hint">
+                            <i data-lucide="info"></i>
+                            The AI will learn this new finding through reinforcement learning.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Severity Correction -->
+                <div class="feedback-field">
+                    <label class="feedback-label">
+                        <i data-lucide="alert-triangle"></i>
+                        Correct severity level
+                    </label>
+                    <div class="severity-buttons" id="severityButtons">
+                        <button class="severity-btn severity-btn-low" data-severity="low">
+                            <span class="severity-dot"></span>
+                            Low
+                        </button>
+                        <button class="severity-btn severity-btn-medium" data-severity="medium">
+                            <span class="severity-dot"></span>
+                            Medium
+                        </button>
+                        <button class="severity-btn severity-btn-high" data-severity="high">
+                            <span class="severity-dot"></span>
+                            High
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Feedback -->
+                <button class="btn btn-primary btn-lg feedback-submit-btn" id="submitFeedbackBtn">
+                    <i data-lucide="brain"></i>
+                    <span>Submit Feedback & Train AI</span>
+                    <div class="btn-shimmer"></div>
+                </button>
+            </div>
+
+            <!-- Feedback Success State -->
+            <div class="feedback-success hidden" id="feedbackSuccess">
+                <div class="feedback-success-icon">
+                    <i data-lucide="check-circle-2"></i>
+                </div>
+                <h4>Feedback Applied Successfully!</h4>
+                <p class="feedback-success-message" id="feedbackMessage"></p>
+                <div class="feedback-stats-mini" id="feedbackStatsMini">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="feedback-actions">
+                    <button class="btn btn-primary btn-lg" id="reanalyzeBtn">
+                        <i data-lucide="refresh-cw"></i>
+                        Re-Analyze with Updated Model
+                        <div class="btn-shimmer"></div>
+                    </button>
+                    <button class="btn btn-ghost" id="addMoreFeedbackBtn">
+                        <i data-lucide="message-square-plus"></i>
+                        Add More Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Scan Button -->
+        <div class="new-scan-area">
+            <button class="btn btn-ghost btn-lg" id="newScanBtn">
+                <i data-lucide="rotate-ccw"></i>
+                Analyze Another Scan
+            </button>
+        </div>
         </div>
     </section>
 
@@ -647,6 +621,34 @@
                         <i data-lucide="info"></i>
                         If your dataset has subfolders (e.g., /Normal, /Pneumonia), each subfolder name becomes a label
                         automatically.
+                    </p>
+                </div>
+
+                <!-- Temp Storage Location -->
+                <div class="training-field">
+                    <label class="feedback-label">
+                        <i data-lucide="hard-drive"></i>
+                        Temp Storage Location
+                    </label>
+                    <div class="temp-location-selector">
+                        <label class="temp-option">
+                            <input type="radio" name="tempLocation" value="system" checked>
+                            <span class="temp-option-label">
+                                <i data-lucide="monitor"></i>
+                                System Temp (Default)
+                            </span>
+                        </label>
+                        <label class="temp-option">
+                            <input type="radio" name="tempLocation" value="project">
+                            <span class="temp-option-label">
+                                <i data-lucide="folder"></i>
+                                Project Folder (Safe Mode)
+                            </span>
+                        </label>
+                    </div>
+                    <p class="custom-finding-hint">
+                        <i data-lucide="info"></i>
+                        Select "Project Folder" if you encounter "File Not Found" errors during training.
                     </p>
                 </div>
 
