@@ -146,6 +146,58 @@
                     style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
                 </div>
             </div>
+
+            <!-- Manual Drug Interaction Checker -->
+            <div id="manualInteractionChecker"
+                style="max-width: 800px; margin: 40px auto 0 auto; background: rgba(0,0,0,0.4); border: 2px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 24px;">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                    <div
+                        style="width:42px;height:42px;min-width:42px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">
+                        ⚠️</div>
+                    <div>
+                        <h3 style="margin:0;color:var(--text-primary);font-size:1.15rem;">Drug Interaction Checker</h3>
+                        <p style="margin:2px 0 0;font-size:0.82rem;color:var(--text-secondary);">Enter medicine names
+                            separated by commas to check for dangerous interactions</p>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:16px;">
+                    <input id="manualMedInput" type="text" placeholder="e.g. Amoxicillin, Ibuprofen, Metformin"
+                        style="flex:1;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text-primary);font-size:0.9rem;outline:none;">
+                    <button id="manualCheckBtn" type="button"
+                        style="padding:10px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.85rem;"><i
+                            data-lucide="search" style="width:14px;height:14px;vertical-align:middle;"></i>
+                        Check</button>
+                </div>
+                <div id="manualInteractionResult"></div>
+            </div>
+
+            <!-- AYUSH Integration Hub -->
+            <div id="ayushHubSection"
+                style="max-width: 800px; margin: 24px auto 0 auto; background: rgba(0,0,0,0.4); border: 2px solid rgba(16,185,129,0.3); border-radius: 16px; padding: 24px;">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                    <div
+                        style="width:42px;height:42px;min-width:42px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:1.3rem;">
+                        🌿</div>
+                    <div>
+                        <h3 style="margin:0;color:var(--text-primary);font-size:1.15rem;">AYUSH Integration Hub</h3>
+                        <p style="margin:2px 0 0;font-size:0.82rem;color:var(--text-secondary);">Search Govt-approved
+                            treatments from Ayurveda, Yoga, Unani, Siddha & Homeopathy</p>
+                    </div>
+                    <span
+                        style="margin-left:auto;padding:2px 8px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:4px;font-size:0.6rem;color:#10b981;font-weight:700;">🇮🇳
+                        MINISTRY OF AYUSH</span>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:16px;">
+                    <input id="ayushSearchInput" type="text"
+                        placeholder="Search condition... e.g. diabetes, cold, joint pain, anxiety"
+                        style="flex:1;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text-primary);font-size:0.9rem;outline:none;">
+                    <button id="ayushSearchBtn" type="button"
+                        style="padding:10px 20px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap;font-size:0.85rem;">
+                        <i data-lucide="leaf" style="width:14px;height:14px;vertical-align:middle;"></i> Search AYUSH
+                    </button>
+                </div>
+                <div id="ayushSearchResult"></div>
+            </div>
         </div>
     </main>
 

@@ -571,6 +571,32 @@
             </div>
         </div>
 
+        <!-- Drug Interaction Checker in Scan Results -->
+        <div id="scanInteractionChecker"
+            style="margin-bottom: 2rem; background: rgba(0,0,0,0.3); border: 2px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 20px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                <div
+                    style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
+                    ⚠️</div>
+                <div>
+                    <h3 style="margin:0;font-size:1.05rem;"><i data-lucide="alert-triangle"
+                            style="width:16px;height:16px;vertical-align:middle;color:#f59e0b;"></i> Drug Interaction
+                        Checker</h3>
+                    <p style="margin:2px 0 0;font-size:0.78rem;color:var(--text-secondary);">Check if your medicines
+                        interact dangerously with each other</p>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:12px;">
+                <input id="scanMedInput" type="text" placeholder="Enter medicines separated by commas..."
+                    style="flex:1;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text-primary);font-size:0.88rem;outline:none;">
+                <button id="scanCheckInteractionBtn" type="button" class="btn btn-primary"
+                    style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;padding:10px 18px;font-weight:600;white-space:nowrap;">
+                    <i data-lucide="search" style="width:14px;height:14px;"></i> Check
+                </button>
+            </div>
+            <div id="scanInteractionResult"></div>
+        </div>
+
         <!-- New Scan Button -->
         <div class="new-scan-area">
             <button class="btn btn-ghost btn-lg" id="newScanBtn">

@@ -1014,6 +1014,229 @@ def download_report(filename):
     )
 
 
+# ---------- Drug Interaction Checker ----------
+@app.route("/api/check-interactions", methods=["POST"])
+def check_drug_interactions():
+    """
+    Check interactions between multiple medicines.
+    Expects JSON: { "medicines": ["Medicine A", "Medicine B", ...] }
+    Returns interaction data with severity levels.
+    """
+    try:
+        data = request.get_json()
+        medicines = data.get("medicines", [])
+
+        if len(medicines) < 2:
+            return jsonify({"error": "Please provide at least 2 medicines to check interactions."}), 400
+
+        groq_key = os.getenv("groq_insurance")
+        if not groq_key:
+            return jsonify({"error": "Groq API key not configured."}), 500
+
+        from groq import Groq
+        client = Groq(api_key=groq_key)
+
+        medicine_list = ", ".join(medicines)
+
+        prompt = f"""You are an expert pharmacologist AI. Analyze all possible drug interactions between these medicines: {medicine_list}
+
+For EACH interaction pair found, provide:
+1. The two medicines involved
+2. Severity level: "severe" (dangerous, avoid), "moderate" (use with caution), "mild" (minor, monitor), or "none" (safe together)
+3. What happens when taken together (the interaction effect)
+4. Clinical recommendation
+5. Which body systems are affected
+
+Return strictly as a valid JSON object:
+{{
+    "total_medicines": {len(medicines)},
+    "interactions_found": true/false,
+    "risk_summary": "Overall risk level: HIGH/MODERATE/LOW/SAFE",
+    "interactions": [
+        {{
+            "medicine_1": "Name of first medicine",
+            "medicine_2": "Name of second medicine",
+            "severity": "severe/moderate/mild/none",
+            "effect": "What happens when taken together",
+            "recommendation": "What the patient should do",
+            "affected_systems": ["Liver", "Kidneys", "Heart"]
+        }}
+    ],
+    "safe_combinations": ["Medicine A + Medicine B"],
+    "general_advice": "Overall advice for the patient"
+}}
+
+Be thorough and accurate. Check every possible pair combination. Do not include any other text except the JSON object."""
+
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_completion_tokens=2000
+        )
+
+        raw = response.choices[0].message.content.strip()
+        # Clean markdown
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+
+        result = json.loads(raw)
+        return jsonify(result), 200
+
+    except json.JSONDecodeError:
+        return jsonify({"error": "Failed to parse AI response", "raw": raw}), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Interaction check failed: {str(e)}"}), 500
+
+
+# ---------- AYUSH Integration Hub ----------
+@app.route("/api/ayush-lookup", methods=["POST"])
+def ayush_lookup():
+    """
+    Search AYUSH medicines by condition/symptom.
+    Expects JSON: { "query": "cold and cough" } or { "query": "diabetes" }
+    Returns medicines from Ayurveda, Yoga, Unani, Siddha, and Homeopathy.
+    """
+    try:
+        data = request.get_json()
+        query = data.get("query", "").strip()
+
+        if not query:
+            return jsonify({"error": "Please provide a condition or symptom to search."}), 400
+
+        groq_key = os.getenv("groq_insurance")
+        if not groq_key:
+            return jsonify({"error": "Groq API key not configured."}), 500
+
+        from groq import Groq
+        client = Groq(api_key=groq_key)
+
+        prompt = f"""You are an expert AYUSH (Ayurveda, Yoga, Unani, Siddha, Homeopathy) specialist AI based in India with deep knowledge of the Ministry of AYUSH approved formulations.
+
+A patient is looking for AYUSH treatments for: "{query}"
+
+For each of the 5 AYUSH systems, suggest the BEST real medicine/treatment. Include government-approved medicines only.
+
+Return strictly as a valid JSON object:
+{{
+    "condition": "{query}",
+    "ayush_results": [
+        {{
+            "system": "Ayurveda",
+            "medicine_name": "Real Ayurvedic medicine name",
+            "manufacturer": "Manufacturer (Dabur, Himalaya, Patanjali, Baidyanath, etc.)",
+            "estimated_price": 150,
+            "key_ingredients": "List of main herbs/ingredients",
+            "therapeutic_use": "How it treats the condition",
+            "overview": "3-4 sentence detailed description of the medicine and its benefits",
+            "ayush_approved": true,
+            "classical_reference": "Classical text reference (e.g., Charaka Samhita, Bhavaprakasha)",
+            "dosage_info": "Exact dosage, timing, and how to take (e.g., 2 tablets twice daily after meals with warm water)",
+            "contraindications": "Who should NOT take this medicine",
+            "quality_percentage": 75,
+            "side_effects": ["List of side effects"]
+        }},
+        {{
+            "system": "Yoga & Naturopathy",
+            "medicine_name": "Specific yoga practice/asana or naturopathy treatment",
+            "manufacturer": "N/A",
+            "estimated_price": 0,
+            "key_ingredients": "Type of practice (pranayama, asana, mudra, diet therapy)",
+            "therapeutic_use": "How this practice helps the condition",
+            "overview": "Detailed description of the practice and benefits",
+            "ayush_approved": true,
+            "classical_reference": "Classical text (e.g., Hatha Yoga Pradipika, Yoga Sutras of Patanjali)",
+            "dosage_info": "How often and how long to practice (e.g., 15 minutes twice daily, morning and evening)",
+            "contraindications": "Who should avoid this practice",
+            "quality_percentage": 80,
+            "side_effects": ["None if practiced correctly"]
+        }},
+        {{
+            "system": "Unani",
+            "medicine_name": "Real Unani medicine name",
+            "manufacturer": "Manufacturer (Hamdard, Rex, Dehlvi, etc.)",
+            "estimated_price": 130,
+            "key_ingredients": "Key ingredients",
+            "therapeutic_use": "How it treats the condition",
+            "overview": "Detailed description",
+            "ayush_approved": true,
+            "classical_reference": "Classical text (e.g., Al-Qanun fil Tibb by Ibn Sina, Kitab al-Shifa)",
+            "dosage_info": "Dosage with timing",
+            "contraindications": "Who should avoid",
+            "quality_percentage": 70,
+            "side_effects": ["Side effects if any"]
+        }},
+        {{
+            "system": "Siddha",
+            "medicine_name": "Real Siddha medicine name",
+            "manufacturer": "Manufacturer or traditional source",
+            "estimated_price": 120,
+            "key_ingredients": "Key herbs/minerals",
+            "therapeutic_use": "How it treats the condition",
+            "overview": "Detailed description",
+            "ayush_approved": true,
+            "classical_reference": "Classical text (e.g., Siddha Vaithiya Thirattu, Agathiyar Gunavagadam, Theraiyar Sekarappa)",
+            "dosage_info": "Dosage with timing",
+            "contraindications": "Who should avoid",
+            "quality_percentage": 70,
+            "side_effects": ["Side effects if any"]
+        }},
+        {{
+            "system": "Homeopathy",
+            "medicine_name": "Real Homeopathic medicine name",
+            "manufacturer": "Manufacturer (SBL, Dr Reckeweg, Schwabe, Boiron, etc.)",
+            "estimated_price": 100,
+            "key_ingredients": "Main potency/ingredient",
+            "therapeutic_use": "How it treats the condition",
+            "overview": "Detailed description",
+            "ayush_approved": true,
+            "classical_reference": "Materia Medica source",
+            "dosage_info": "Potency and dosage (e.g., 30C, 4 globules 3 times daily)",
+            "contraindications": "Contraindications if any",
+            "quality_percentage": 65,
+            "side_effects": ["Side effects if any"]
+        }}
+    ],
+    "lifestyle_tips": "3-4 general lifestyle tips from AYUSH perspective for managing this condition",
+    "when_to_see_doctor": "When the patient should consult a modern medicine doctor instead of relying solely on AYUSH"
+}}
+
+IMPORTANT: Only suggest real, genuine medicines/treatments. Be accurate with classical text references. Do not include any text except the JSON object."""
+
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_completion_tokens=3000
+        )
+
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+
+        result = json.loads(raw)
+        return jsonify(result), 200
+
+    except json.JSONDecodeError:
+        return jsonify({"error": "Failed to parse AI response", "raw": raw}), 500
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"AYUSH lookup failed: {str(e)}"}), 500
+
+
 @app.route("/api/advocate/analyze", methods=["POST"])
 def analyze_prescription():
     """
@@ -1083,7 +1306,11 @@ def analyze_prescription():
                             "therapeutic_use": "How this medicine treats the same condition",
                             "overview": "Detailed 3-4 sentence description",
                             "quality_percentage": 75,
-                            "side_effects": ["Mild gastric irritation"]
+                            "side_effects": ["Mild gastric irritation"],
+                            "ayush_approved": true,
+                            "classical_reference": "Name of classical Ayurvedic text (e.g., Charaka Samhita, Sushruta Samhita, Ashtanga Hridaya)",
+                            "dosage_info": "Recommended dosage (e.g., 2 tablets twice daily after meals with warm water)",
+                            "contraindications": "Who should NOT take this (e.g., pregnant women, children under 5)"
                         }},
                         {{
                             "system": "Siddha",
@@ -1094,7 +1321,11 @@ def analyze_prescription():
                             "therapeutic_use": "How this medicine treats the same condition",
                             "overview": "Detailed 3-4 sentence description",
                             "quality_percentage": 70,
-                            "side_effects": ["Rare allergic reactions"]
+                            "side_effects": ["Rare allergic reactions"],
+                            "ayush_approved": true,
+                            "classical_reference": "Name of classical Siddha text (e.g., Siddha Vaithiya Thirattu, Agathiyar Gunavagadam)",
+                            "dosage_info": "Recommended dosage with timing and how to take",
+                            "contraindications": "Who should NOT take this medicine"
                         }},
                         {{
                             "system": "Homeopathy",
@@ -1105,7 +1336,11 @@ def analyze_prescription():
                             "therapeutic_use": "How this medicine treats the same condition",
                             "overview": "Detailed 3-4 sentence description",
                             "quality_percentage": 65,
-                            "side_effects": ["No known side effects"]
+                            "side_effects": ["No known side effects"],
+                            "ayush_approved": true,
+                            "classical_reference": "Materia Medica reference or proving source",
+                            "dosage_info": "Recommended potency and dosage (e.g., 30C, 4 globules 3 times daily)",
+                            "contraindications": "Any contraindications or interactions to avoid"
                         }}
                     ],
                     "best_recommendation": {{
