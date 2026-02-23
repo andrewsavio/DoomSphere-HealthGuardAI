@@ -17,7 +17,7 @@ TABLE OF CONTENTS
 5. System Architecture
 6. Technology Stack
 7. Deep Learning Model — DenseNet-121
-8. GradCAM — Explainable AI Visualization
+8. Hi-Res CAM — Explainable AI Visualization
 9. Scan Type Classification Module
 10. AI Analysis Pipeline
 11. Reinforcement Learning & Feedback System
@@ -74,7 +74,7 @@ tool that:
 
   • Automatically identifies the type of medical scan uploaded
   • Uses a deep learning model (DenseNet-121) to detect anomalies
-  • Generates visual explanations (GradCAM heatmaps) so clinicians can
+  • Generates visual explanations (Hi-Res CAM heatmaps) so clinicians can
     understand what the AI is focusing on
   • Produces comprehensive, professional PDF reports suitable for medical
     records
@@ -111,7 +111,7 @@ Current challenges in medical imaging analysis:
      time-consuming and diverts radiologists from primary diagnostic work.
 
 HealthGuard AI addresses ALL of these challenges through automated analysis,
-visual explainability (GradCAM), and automated professional report generation.
+visual explainability (Hi-Res CAM), and automated professional report generation.
 
 
 ================================================================================
@@ -131,7 +131,7 @@ The primary objectives of HealthGuard AI are:
      opacities, calcifications, infections, and structural anomalies with
      confidence scoring.
 
-  4. Provide explainable AI through GradCAM heatmap visualization,
+  4. Provide explainable AI through Hi-Res CAM heatmap visualization,
      highlighting the regions influencing AI predictions.
 
   5. Generate professional-grade downloadable PDF radiology reports with
@@ -176,7 +176,7 @@ HealthGuard AI follows a modular, layered architecture:
   │ scan_       │     │ analyzer.py   │     │ report_       │
   │ classifier  │     │               │     │ generator.py  │
   │ .py         │     │ DenseNet-121  │     │               │
-  │             │     │ + GradCAM     │     │ FPDF2 Engine  │
+  │             │     │ + Hi-Res CAM     │     │ FPDF2 Engine  │
   │ Rule-based  │     │ + Groq LLM   │     │               │
   │ + Stats     │     │               │     │ Professional  │
   │             │     │ (Two-Stage    │     │ Medical PDF   │
@@ -205,7 +205,7 @@ Directory Structure:
   ├── backend/
   │   ├── __init__.py
   │   ├── scan_classifier.py      # Scan type classification (196 lines)
-  │   ├── analyzer.py             # DenseNet-121 + GradCAM + Groq (1446 lines)
+  │   ├── analyzer.py             # DenseNet-121 + Hi-Res CAM + Groq (1446 lines)
   │   └── report_generator.py     # PDF report generation (365 lines)
   ├── frontend/
   │   ├── index.html              # Main UI (42K)
@@ -227,7 +227,7 @@ Directory Structure:
   Programming Lang.     Python                  3.9+
   Deep Learning         PyTorch                 2.5+
   Pre-trained Model     DenseNet-121            ImageNet pre-trained weights
-  Explainable AI        pytorch-grad-cam        GradCAM heatmap generation
+  Explainable AI        pytorch-grad-cam        Hi-Res CAM heatmap generation
   Image Processing      OpenCV (cv2)            Edge detection, contours
   Image I/O             Pillow (PIL)            Image loading & conversion
   Numerical Comp.       NumPy                   Array operations, statistics
@@ -371,13 +371,13 @@ the following 15 medical finding categories:
 
 
 ================================================================================
-8. GradCAM — EXPLAINABLE AI VISUALIZATION
+8. Hi-Res CAM — EXPLAINABLE AI VISUALIZATION
 ================================================================================
 
-8.1 WHAT IS GradCAM?
+8.1 WHAT IS Hi-Res CAM?
 ---------------------
 
-Gradient-weighted Class Activation Mapping (GradCAM) is an explainability
+Gradient-weighted Class Activation Mapping (Hi-Res CAM) is an explainability
 technique that produces visual explanations for CNN predictions. It uses the
 gradients flowing into the final convolutional layer to produce a coarse
 localization map highlighting the important regions in the image for
@@ -486,13 +486,13 @@ combines the strengths of local deep learning with cloud-based LLM inference:
   │   3. 1024-dim feature vector → Custom classifier head             │
   │   4. Softmax activation → Probability distribution over findings  │
   │   5. Top-5 findings extracted with confidence scores              │
-  │   6. GradCAM heatmap generation on the last dense block           │
+  │   6. Hi-Res CAM heatmap generation on the last dense block           │
   │   7. Contour detection + bounding box annotation                  │
   │                                                                   │
   │  Output:                                                          │
   │   • List of findings with confidence percentages                  │
   │   • Overall severity (LOW / MEDIUM / HIGH)                        │
-  │   • GradCAM heatmap overlay image                                 │
+  │   • Hi-Res CAM heatmap overlay image                                 │
   │   • Annotated scan with bounding boxes                            │
   │   • Initial professional report data structure                    │
   │                                                                   │
@@ -708,12 +708,12 @@ suitable for medical records.
     • Specialty referral recommendations
 
   VISUAL ANALYSIS APPENDIX
-    • GradCAM heatmap overlaid on original scan
+    • Hi-Res CAM heatmap overlaid on original scan
     • Annotated regions of interest with bounding boxes
 
   DISCLAIMER
     • AI-generated analysis disclaimer
-    • Model architecture details (DenseNet-121 + GradCAM)
+    • Model architecture details (DenseNet-121 + Hi-Res CAM)
     • Limitation acknowledgment
 
 13.2 PDF TECHNOLOGY
@@ -763,7 +763,7 @@ File: frontend/index.html + styles.css + app.js
      • Confidence percentage bars
 
   3. VISUAL ANALYSIS PANEL
-     • GradCAM heatmap display
+     • Hi-Res CAM heatmap display
      • Annotated regions display
      • Image zoom and pan controls
 
@@ -877,7 +877,7 @@ DETAILED STEP-BY-STEP:
   Step 5: Backend receives image, classifies scan type via scan_classifier
   Step 6: DenseNet-121 processes the image, extracts 1024-dim features
   Step 7: Classifier head maps features to medical finding probabilities
-  Step 8: GradCAM generates heatmap visualization on last dense block
+  Step 8: Hi-Res CAM generates heatmap visualization on last dense block
   Step 9: OpenCV contour detection annotates regions of interest
   Step 10: Groq API receives image + metadata for clinical reasoning
   Step 11: Llama-3.3-70B generates comprehensive 7-section report data
@@ -992,7 +992,7 @@ Key achievements:
     reuse provide robust visual pattern recognition across 8 imaging
     modalities and 15+ medical conditions.
 
-  • EXPLAINABLE AI: GradCAM heatmaps provide visual transparency, showing
+  • EXPLAINABLE AI: Hi-Res CAM heatmaps provide visual transparency, showing
     clinicians exactly which regions of the scan influenced the AI's
     decision, building trust in AI-assisted diagnostics.
 
@@ -1052,3 +1052,4 @@ more accurate patient care.
                          END OF REPORT
               © 2026 DoomSphere — HealthGuard AI
 ================================================================================
+

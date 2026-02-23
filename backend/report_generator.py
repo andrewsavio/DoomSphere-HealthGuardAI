@@ -338,7 +338,7 @@ def generate_report(
             if os.path.exists(heatmap_full):
                 pdf.set_font("Helvetica", "B", 10)
                 pdf.set_text_color(*BLACK)
-                pdf.cell(0, 8, "GradCAM Heatmap Analysis", ln=True)
+                pdf.cell(0, 8, "Hi-Res CAM Heatmap Analysis", ln=True)
                 pdf.set_font("Helvetica", "", 8)
                 pdf.set_text_color(*BLACK)
                 pdf.cell(0, 5, "Warmer colors indicate regions most relevant to the AI prediction.", ln=True)
@@ -382,7 +382,7 @@ def generate_report(
         "analysis and highlighting potential areas of interest. All findings should be reviewed "
         "and validated by qualified medical professionals.\n\n"
         "The AI model uses deep learning techniques including DenseNet-121 architecture with "
-        "GradCAM visualization. While the model has been trained on medical imaging data, "
+        "Hi-Res CAM visualization. While the model has been trained on medical imaging data, "
         "it may produce false positives or miss findings. Always consult with a licensed "
         "healthcare provider for proper diagnosis and treatment.\n\n"
         "HealthGuard AI and its developers are not liable for any medical decisions made "
@@ -396,3 +396,26 @@ def generate_report(
     pdf.output(report_path)
 
     return report_filename
+
+def compress_pdf(input_path: str, output_path: str) -> bool:
+    """
+    Losslessly compress a PDF file using PyPDF2 by compressing content streams.
+    Returns True if successful, False otherwise.
+    """
+    try:
+        from PyPDF2 import PdfReader, PdfWriter
+        
+        reader = PdfReader(input_path)
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            page.compress_content_streams() # This is CPU intensive but can shrink file size
+            writer.add_page(page)
+
+        with open(output_path, "wb") as f:
+            writer.write(f)
+            
+        return True
+    except Exception as e:
+        print(f"[HealthGuard AI] ⚠️ Failed to compress PDF {input_path}: {e}")
+        return False

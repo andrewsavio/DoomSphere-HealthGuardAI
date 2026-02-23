@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard AI — Medical Scan Analysis</title>
+    <meta name="description"
+        content="Industry-grade AI-powered medical scan analysis. Upload any medical scan for instant AI analysis with Hi-Res CAM heatmap visualization and downloadable PDF reports.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Compressor.js for client-side image compression -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">HealthGuard</span>
+                <span class="brand-badge">AI</span>
+            </div>
+        </div>
+        <div class="nav-status" id="navStatus">
+            <div class="status-dot pulse"></div>
+            <span id="authStatusText">System Online</span>
+        </div>
+        <div class="nav-links">
+            <a href="/features" class="nav-link active">Features</a>
+            <a href="/analyze" class="nav-link">Analyze</a>
+            <a href="/about" class="nav-link">About</a>
+            <a href="/chatbot" class="nav-link">Chat Bot</a>
+            <a href="/login" class="nav-link auth-link" id="navAuthLink" style="display: none;">Login</a>
+        </div>
+    </nav>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+        <div class="section-header">
+            <span class="section-badge">Capabilities</span>
+            <h2 class="section-title">Powerful AI Features</h2>
+            <p class="section-subtitle">Everything you need for comprehensive medical scan analysis</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon cyan">
+                    <i data-lucide="scan-search"></i>
+                </div>
+                <h3>Scan Type Detection</h3>
+                <p>Automatically identifies the type of medical scan — X-Ray, CT, MRI, Ultrasound, PET, Mammogram, DEXA,
+                    and Fluoroscopy.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon purple">
+                    <i data-lucide="brain-circuit"></i>
+                </div>
+                <h3>DenseNet-121 Analysis</h3>
+                <p>Deep learning model trained to detect 15+ medical findings including fractures, masses,
+                    calcifications, and more.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon orange">
+                    <i data-lucide="flame"></i>
+                </div>
+                <h3>Hi-Res CAM Heatmaps</h3>
+                <p>Visual explanations showing exactly which regions the AI focused on, with warm-to-cool color
+                    gradients.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">
+                    <i data-lucide="box-select"></i>
+                </div>
+                <h3>Region Marking</h3>
+                <p>Automatic contour detection and bounding box annotation around regions of interest with severity
+                    indicators.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon pink">
+                    <i data-lucide="file-down"></i>
+                </div>
+                <h3>PDF Reports</h3>
+                <p>Download comprehensive, professionally formatted PDF reports with all findings, images, and medical
+                    disclaimers.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon yellow">
+                    <i data-lucide="gauge"></i>
+                </div>
+                <h3>Severity Scoring</h3>
+                <p>Color-coded severity levels (Low, Medium, High) for each finding to help prioritize clinical
+                    attention.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="brand-icon">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <span class="brand-name">HealthGuard AI</span>
+            </div>
+            <p class="footer-disclaimer">
+                ⚠️ This is an AI-assisted analysis tool and is NOT a substitute for professional medical diagnosis.
+                Always consult qualified healthcare professionals.
+            </p>
+            <p class="footer-copy">© 2026 HealthGuard AI by DoomSphere. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://js.puter.com/v2/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

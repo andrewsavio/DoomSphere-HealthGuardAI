@@ -1,6 +1,6 @@
 # 🛡️ HealthGuard AI — Medical Scan Analysis Engine
 
-> AI-powered medical scan analysis with DenseNet-121 deep learning, GradCAM heatmap visualization, and comprehensive PDF report generation.
+> AI-powered medical scan analysis with DenseNet-121 deep learning, Hi-Res CAM heatmap visualization, and comprehensive PDF report generation.
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.5-red)
@@ -11,7 +11,7 @@
 
 - **🔍 Scan Type Detection** — Automatically identifies X-Ray, CT, MRI, Ultrasound, PET, Mammogram, DEXA, and Fluoroscopy scans
 - **🧠 DenseNet-121 Analysis** — Deep learning model detecting 15+ medical findings
-- **🔥 GradCAM Heatmaps** — Visual explanations showing AI focus regions
+- **🔥 Hi-Res CAM Heatmaps** — Visual explanations showing AI focus regions
 - **📐 Region Marking** — Automatic contour detection with bounding boxes and severity indicators
 - **📄 PDF Reports** — Professional downloadable reports with all findings and images
 - **⚡ Severity Scoring** — Color-coded Low/Medium/High severity classification
@@ -54,7 +54,7 @@ DoomSphere-HealthGuardAI/
 ├── backend/
 │   ├── __init__.py
 │   ├── scan_classifier.py      # Scan type classification
-│   ├── analyzer.py             # DenseNet-121 + GradCAM analysis
+│   ├── analyzer.py             # DenseNet-121 + Hi-Res CAM analysis
 │   └── report_generator.py     # PDF report generation
 ├── frontend/
 │   ├── index.html              # Main UI
@@ -70,7 +70,7 @@ DoomSphere-HealthGuardAI/
 1. **Upload** — User uploads a medical scan image
 2. **Classify** — Image features are extracted to identify scan type
 3. **Analyze** — DenseNet-121 processes the image for medical findings
-4. **Visualize** — GradCAM generates heatmaps; contours mark regions of interest
+4. **Visualize** — Hi-Res CAM generates heatmaps; contours mark regions of interest
 5. **Report** — Comprehensive PDF report is generated
 
 ## ⚠️ Disclaimer

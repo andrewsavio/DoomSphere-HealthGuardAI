@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HealthGuard AI — Medical Scan Analysis</title>
     <meta name="description"
-        content="Industry-grade AI-powered medical scan analysis. Upload any medical scan for instant AI analysis with GradCAM heatmap visualization and downloadable PDF reports.">
+        content="Industry-grade AI-powered medical scan analysis. Upload any medical scan for instant AI analysis with Hi-Res CAM heatmap visualization and downloadable PDF reports.">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,6 +17,9 @@
 
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Compressor.js for client-side image compression -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
 
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -43,12 +46,14 @@
         </div>
         <div class="nav-status" id="navStatus">
             <div class="status-dot pulse"></div>
-            <span>System Online</span>
+            <span id="authStatusText">System Online</span>
         </div>
         <div class="nav-links">
-            <a href="#features" class="nav-link">Features</a>
-            <a href="#upload" class="nav-link">Analyze</a>
-            <a href="#about" class="nav-link">About</a>
+            <a href="/features" class="nav-link">Features</a>
+            <a href="/analyze" class="nav-link active">Analyze</a>
+            <a href="/about" class="nav-link">About</a>
+            <a href="/chatbot" class="nav-link">Chat Bot</a>
+            <a href="/login" class="nav-link auth-link" id="navAuthLink" style="display: none;">Login</a>
         </div>
     </nav>
 
@@ -66,7 +71,7 @@
             <p class="hero-subtitle">
                 Upload any medical scan — X-Ray, MRI, CT, Ultrasound — and let our
                 DenseNet-121 AI model analyze, classify, and highlight regions of interest
-                with precision GradCAM heatmaps.
+                with precision Hi-Res CAM heatmaps.
             </p>
             <div class="hero-actions">
                 <a href="#upload" class="btn btn-primary btn-lg" id="heroAnalyzeBtn">
@@ -88,7 +93,7 @@
                     <span class="stat-label">Scan Types</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">GradCAM</span>
+                    <span class="stat-value">Hi-Res CAM</span>
                     <span class="stat-label">Heatmap Engine</span>
                 </div>
                 <div class="stat-item">
@@ -112,64 +117,7 @@
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features-section" id="features">
-        <div class="section-header">
-            <span class="section-badge">Capabilities</span>
-            <h2 class="section-title">Powerful AI Features</h2>
-            <p class="section-subtitle">Everything you need for comprehensive medical scan analysis</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon cyan">
-                    <i data-lucide="scan-search"></i>
-                </div>
-                <h3>Scan Type Detection</h3>
-                <p>Automatically identifies the type of medical scan — X-Ray, CT, MRI, Ultrasound, PET, Mammogram, DEXA,
-                    and Fluoroscopy.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon purple">
-                    <i data-lucide="brain-circuit"></i>
-                </div>
-                <h3>DenseNet-121 Analysis</h3>
-                <p>Deep learning model trained to detect 15+ medical findings including fractures, masses,
-                    calcifications, and more.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon orange">
-                    <i data-lucide="flame"></i>
-                </div>
-                <h3>GradCAM Heatmaps</h3>
-                <p>Visual explanations showing exactly which regions the AI focused on, with warm-to-cool color
-                    gradients.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon green">
-                    <i data-lucide="box-select"></i>
-                </div>
-                <h3>Region Marking</h3>
-                <p>Automatic contour detection and bounding box annotation around regions of interest with severity
-                    indicators.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon pink">
-                    <i data-lucide="file-down"></i>
-                </div>
-                <h3>PDF Reports</h3>
-                <p>Download comprehensive, professionally formatted PDF reports with all findings, images, and medical
-                    disclaimers.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon yellow">
-                    <i data-lucide="gauge"></i>
-                </div>
-                <h3>Severity Scoring</h3>
-                <p>Color-coded severity levels (Low, Medium, High) for each finding to help prioritize clinical
-                    attention.</p>
-            </div>
-        </div>
-    </section>
+    <!-- Features Section Removed -->
 
     <!-- Upload Section -->
     <section class="upload-section" id="upload">
@@ -288,7 +236,7 @@
                     <div class="step-indicator">
                         <div class="step-spinner"></div>
                     </div>
-                    <span>Generating GradCAM heatmap...</span>
+                    <span>Generating Hi-Res CAM heatmap...</span>
                 </div>
                 <div class="loading-step" id="step4">
                     <div class="step-indicator">
@@ -794,54 +742,7 @@
         </div>
     </section>
 
-    <!-- About Section -->
-    <section class="about-section" id="about">
-        <div class="section-header">
-            <span class="section-badge">Technology</span>
-            <h2 class="section-title">How It Works</h2>
-        </div>
-        <div class="pipeline-steps">
-            <div class="pipeline-step">
-                <div class="pipeline-number">01</div>
-                <div class="pipeline-content">
-                    <h3>Upload</h3>
-                    <p>Upload any medical scan image. Our system accepts X-Ray, CT, MRI, Ultrasound, and more.</p>
-                </div>
-            </div>
-            <div class="pipeline-connector"></div>
-            <div class="pipeline-step">
-                <div class="pipeline-number">02</div>
-                <div class="pipeline-content">
-                    <h3>Classify</h3>
-                    <p>AI analyzes image features to automatically determine the type of medical scan.</p>
-                </div>
-            </div>
-            <div class="pipeline-connector"></div>
-            <div class="pipeline-step">
-                <div class="pipeline-number">03</div>
-                <div class="pipeline-content">
-                    <h3>Analyze</h3>
-                    <p>DenseNet-121 deep learning model processes the scan to detect medical findings.</p>
-                </div>
-            </div>
-            <div class="pipeline-connector"></div>
-            <div class="pipeline-step">
-                <div class="pipeline-number">04</div>
-                <div class="pipeline-content">
-                    <h3>Visualize</h3>
-                    <p>GradCAM generates heatmaps and contour annotations highlighting regions of interest.</p>
-                </div>
-            </div>
-            <div class="pipeline-connector"></div>
-            <div class="pipeline-step">
-                <div class="pipeline-number">05</div>
-                <div class="pipeline-content">
-                    <h3>Report</h3>
-                    <p>Download a comprehensive PDF report with all findings, images, and severity scores.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- About Section Removed -->
 
     <!-- Footer -->
     <footer class="footer">
@@ -861,6 +762,7 @@
     </footer>
 
     <script src="https://js.puter.com/v2/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 </body>
 

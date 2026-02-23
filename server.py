@@ -13,6 +13,9 @@ import zipfile
 import tarfile
 import tempfile
 import threading
+import io
+import requests
+import base64
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_cors import CORS
 from PIL import Image
@@ -21,17 +24,49 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from backend.scan_classifier import classify_scan_type
 from backend.analyzer import MedicalImageAnalyzer, MEDICAL_FINDINGS
-from backend.report_generator import generate_report
+from backend.report_generator import generate_report, compress_pdf
 
 # ---------- Configuration ----------
-UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 RESULTS_FOLDER = os.path.join(os.path.dirname(__file__), "results")
 REPORTS_FOLDER = os.path.join(os.path.dirname(__file__), "reports")
 FEEDBACK_FOLDER = os.path.join(os.path.dirname(__file__), "feedback")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tiff", "tif", "dcm", "webp"}
 DATASET_EXTENSIONS = {"zip", "tar", "gz", "tgz", "tar.gz", "7z", "rar"}
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Supabase Credentials
+SUPABASE_URL = os.getenv("project_url")
+SUPABASE_KEY = os.getenv("anon_key")
+
+supabase_client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        from supabase import create_client, Client
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("[HealthGuard AI] ✅ Supabase Python client initialized")
+    except Exception as e:
+        print(f"[HealthGuard AI] ⚠️ Failed to initialize Supabase client: {e}")
+
+def _save_to_supabase(data_dict, image_bytes):
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        print("[HealthGuard AI] ⚠️ Supabase credentials missing locally.")
+        return
+    try:
+        payload = dict(data_dict)
+        if image_bytes:
+            payload["scan_image_base64"] = base64.b64encode(image_bytes).decode('utf-8')
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        }
+        resp = requests.post(f"{SUPABASE_URL}/rest/v1/scan_results", json=payload, headers=headers, timeout=10)
+        if resp.status_code in [200, 201]:
+            print("[HealthGuard AI] ✅ Successfully pushed results and image to Supabase!")
+        else:
+            print(f"[HealthGuard AI] ❌ Failed to push to Supabase: {resp.status_code} - {resp.text}")
+    except Exception as e:
+        print(f"[HealthGuard AI] ❌ Error pushing to Supabase: {str(e)}")
 os.makedirs(RESULTS_FOLDER, exist_ok=True)
 os.makedirs(REPORTS_FOLDER, exist_ok=True)
 os.makedirs(FEEDBACK_FOLDER, exist_ok=True)
@@ -87,13 +122,46 @@ def allowed_file(filename):
 
 
 @app.route("/")
-def serve_frontend():
+def serve_root():
+    # Redirect root to analyze page as the default landing
     return send_from_directory("frontend", "index.html")
+
+@app.route("/analyze")
+def serve_analyze():
+    return send_from_directory("frontend", "index.html")
+
+@app.route("/features")
+def serve_features():
+    return send_from_directory("frontend", "features.html")
+
+@app.route("/about")
+def serve_about():
+    return send_from_directory("frontend", "about.html")
+
+@app.route("/chatbot")
+@app.route("/chatbot/")
+def serve_chatbot_index():
+    return send_from_directory("frontend", "chatbot.html")
+
+@app.route("/login")
+@app.route("/login/")
+def serve_login():
+    return send_from_directory("frontend", "login.html")
 
 
 @app.route("/<path:path>")
 def serve_static(path):
     return send_from_directory("frontend", path)
+
+
+@app.route("/api/config", methods=["GET"])
+def get_config():
+    """Exposes public/safe configuration variables to the frontend JS."""
+    return jsonify({
+        "supabase_url": SUPABASE_URL or os.getenv("SUPABASE_URL", ""),
+        "supabase_anon_key": SUPABASE_KEY or os.getenv("SUPABASE_ANON_KEY", ""),
+        "groq_api_key": os.getenv("GROQ_API_KEY", "")
+    })
 
 
 @app.route("/api/health", methods=["GET"])
@@ -138,12 +206,10 @@ def analyze_scan():
         session_id = str(uuid.uuid4())[:12]
         original_filename = secure_filename(file.filename)
 
-        # Save uploaded file
-        upload_path = os.path.join(UPLOAD_FOLDER, f"{session_id}_{original_filename}")
-        file.save(upload_path)
-
-        # Open image
-        image = Image.open(upload_path)
+        # Read image to memory directly
+        image_bytes = file.read()
+        image = Image.open(io.BytesIO(image_bytes))
+        upload_path = None # Deprecated parameter for legacy dict compat
 
         # Step 1: Classify scan type
         scan_type_result = classify_scan_type(image)
@@ -193,6 +259,51 @@ def analyze_scan():
             detailed_report=analysis_result.get("detailed_report")
         )
 
+        # --- Cloud PDF Compression & Storage ---
+        report_path = os.path.join(REPORTS_FOLDER, report_filename)
+        compressed_path = os.path.join(REPORTS_FOLDER, "compressed_" + report_filename)
+        supabase_report_url = None
+
+        if supabase_client:
+            print("[HealthGuard AI] 🗜️ Compressing PDF report...")
+            is_compressed = compress_pdf(report_path, compressed_path)
+            final_upload_path = compressed_path if is_compressed else report_path
+
+            try:
+                file_size_kb = os.path.getsize(final_upload_path) // 1024
+                with open(final_upload_path, "rb") as f:
+                    pdf_bytes = f.read()
+
+                # Upload to Supabase Storage
+                storage_path = f"{session_id}/{report_filename}"
+                print(f"[HealthGuard AI] ☁️ Uploading PDF to Supabase ({file_size_kb}KB)...")
+                
+                supabase_client.storage.from_("reports").upload(
+                    file=pdf_bytes,
+                    path=storage_path,
+                    file_options={"content-type": "application/pdf"}
+                )
+
+                # Get public URL
+                supabase_report_url = supabase_client.storage.from_("reports").get_public_url(storage_path)
+                print(f"[HealthGuard AI] ✅ Uploaded PDF to Supabase: {supabase_report_url}")
+
+                # Insert tracking row
+                supabase_client.table("scan_reports").insert({
+                    "session_id": session_id,
+                    "patient_name": patient_name,
+                    "scan_type": final_scan_type,
+                    "severity": analysis_result["overall_severity"],
+                    "file_name": report_filename,
+                    "file_size_kb": file_size_kb,
+                    "storage_path": storage_path
+                }).execute()
+                print("[HealthGuard AI] ✅ Created DB record for PDF report.")
+
+            except Exception as e:
+                print(f"[HealthGuard AI] ⚠️ Supabase PDF Upload Error: {e}")
+
+
 
         # Save session data to disk for persistence (fixes "Session not found" after restart)
         # 1. Save original image copy
@@ -237,8 +348,11 @@ def analyze_scan():
             "report": {
                 "filename": report_filename,
                 "download_url": f"/api/report/{report_filename}",
+                "supabase_report_url": supabase_report_url
             },
         }
+        # Async-capable push to Supabase
+        threading.Thread(target=_save_to_supabase, args=(response, image_bytes)).start()
 
         return jsonify(response), 200
 
@@ -346,7 +460,7 @@ def reanalyze_scan():
             return jsonify({"error": "Session not found. Please re-upload the scan."}), 404
 
         session_data = session_store[session_id]
-        image = Image.open(session_data["upload_path"])
+        image = Image.open(session_data.get("persistence_path") or session_data.get("upload_path"))
         original_filename = session_data["original_filename"]
         scan_type_result = session_data["scan_type_result"]
 
@@ -644,12 +758,10 @@ def analyze_batch():
             session_id = str(uuid.uuid4())[:12]
             original_filename = secure_filename(file.filename)
 
-            # Save uploaded file
-            upload_path = os.path.join(UPLOAD_FOLDER, f"{session_id}_{original_filename}")
-            file.save(upload_path)
-
-            # Open image
-            image = Image.open(upload_path)
+            # Read image to memory directly
+            image_bytes = file.read()
+            image = Image.open(io.BytesIO(image_bytes))
+            upload_path = None
 
             # Step 1: Classify scan type
             scan_type_result = classify_scan_type(image)
@@ -701,7 +813,7 @@ def analyze_batch():
                 "persistence_path": persistence_path,
             }
 
-            results.append({
+            result_payload = {
                 "filename": original_filename,
                 "session_id": session_id,
                 "scan_type": scan_type_result,
@@ -722,7 +834,9 @@ def analyze_batch():
                     "filename": report_filename,
                     "download_url": f"/api/report/{report_filename}",
                 },
-            })
+            }
+            results.append(result_payload)
+            threading.Thread(target=_save_to_supabase, args=(result_payload, image_bytes)).start()
 
         except Exception as e:
             import traceback

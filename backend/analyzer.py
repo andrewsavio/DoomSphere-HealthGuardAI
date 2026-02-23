@@ -1,7 +1,7 @@
 """
 Medical Image Analyzer Module
 Uses DenseNet121 pre-trained on ImageNet as a feature extractor,
-with GradCAM for heatmap visualization of prediction-relevant regions.
+with Hi-Res CAM for heatmap visualization of prediction-relevant regions.
 Provides medical finding analysis for uploaded scan images.
 """
 
@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import datetime
 import random
 from torchvision import models, transforms
-from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam import HiResCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 import requests
@@ -195,7 +195,7 @@ SEVERITY_LEVELS = {
 
 class MedicalImageAnalyzer:
     """
-    Analyzes medical images using DenseNet121 with GradCAM heatmap generation.
+    Analyzes medical images using DenseNet121 with Hi-Res CAM heatmap generation.
     Supports online reinforcement learning, custom findings, and dataset training.
     """
 
@@ -251,7 +251,7 @@ class MedicalImageAnalyzer:
             ),
         ])
 
-        # GradCAM target layer (last DenseNet block)
+        # Hi-Res CAM target layer (last DenseNet block)
         self.target_layer = self.model.features[-1]
 
         # Feedback & training system
@@ -847,7 +847,7 @@ class MedicalImageAnalyzer:
                 "severity": "low",
             })
 
-        # Generate GradCAM heatmap for top prediction - DISABLED
+        # Generate Hi-Res CAM heatmap for top prediction - DISABLED
         # primary_idx = top_indices[0]
         # heatmap_path, annotated_path = self._generate_heatmap(
         #     image, input_tensor, primary_idx, output_dir
@@ -1621,15 +1621,15 @@ Return a valid JSON object ONLY, with NO markdown formatting, matching this stru
         target_class: int,
         output_dir: str,
     ) -> tuple:
-        """Generate GradCAM heatmap and annotated image."""
+        """Generate Hi-Res CAM heatmap and annotated image."""
         uid = str(uuid.uuid4())[:8]
 
         # Resize original for overlay
         img_resized = original_image.resize((224, 224))
         img_np = np.array(img_resized).astype(np.float32) / 255.0
 
-        # GradCAM
-        cam = GradCAM(model=self.model, target_layers=[self.target_layer])
+        # Hi-Res CAM
+        cam = HiResCAM(model=self.model, target_layers=[self.target_layer])
         targets = [ClassifierOutputTarget(target_class)]
         grayscale_cam = cam(input_tensor=input_tensor, targets=targets)
         grayscale_cam = grayscale_cam[0, :]
