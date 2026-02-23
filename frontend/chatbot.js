@@ -22,6 +22,7 @@ const removeChatImageBtn = document.getElementById('removeChatImageBtn');
 let messageHistory = [];
 let isTyping = false;
 let selectedImageFile = null;
+let currentSessionId = null; // Tracks active Supabase session record
 
 // Configuration
 const CHAT_MODEL = 'claude-opus-4-6';
@@ -108,7 +109,117 @@ document.addEventListener('DOMContentLoaded', async () => {
             await handleUserMessage(text);
         });
     });
+
+    // New Chat Button
+    const newChatBtn = document.getElementById('newChatBtn');
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', () => {
+            currentSessionId = null;
+            messageHistory = [];
+            messagesStream.innerHTML = `
+                <div class="message system-message welcome-wrapper">
+                    <div class="welcome-box">
+                        <div class="welcome-icon">
+                            <i data-lucide="sparkles"></i>
+                        </div>
+                        <h3>Hello! I'm HealthGuard AI</h3>
+                        <p>I can help you understand medical reports, explain medications, and provide wellness tips.</p>
+                        <div class="quick-prompts">
+                            <button class="quick-prompt-btn" onclick="handleUserMessage('Explain my medication')">💊 Explain my medication</button>
+                            <button class="quick-prompt-btn" onclick="handleUserMessage('What does my blood test mean?')">🩸 What does my blood test mean?</button>
+                            <button class="quick-prompt-btn" onclick="handleUserMessage('Wellness tips for today')">🏃 Wellness tips for today</button>
+                            <button class="quick-prompt-btn" onclick="handleUserMessage('Diet recommendations')">🍎 Diet recommendations</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+        });
+    }
+
+    // Wait for Supabase to initialize from app.js then load history
+    setTimeout(loadChatHistory, 1000);
 });
+
+async function loadChatHistory() {
+    const list = document.getElementById('chatHistoryList');
+    if (!list) return;
+
+    if (!window.supabaseClient || !window.currentUser) {
+        list.innerHTML = '<div style="padding: 15px; color: var(--text-secondary); font-size: 0.9rem;">Please log in to view history</div>';
+        return;
+    }
+
+    try {
+        const { data: sessions, error } = await window.supabaseClient
+            .from('chat_sessions')
+            .select('*')
+            .eq('user_id', window.currentUser.id)
+            .order('updated_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (!sessions || sessions.length === 0) {
+            list.innerHTML = '<div style="padding: 15px; color: var(--text-secondary); font-size: 0.9rem;">No previous chats</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        sessions.forEach(session => {
+            const div = document.createElement('div');
+            div.className = `history-item ${currentSessionId === session.id ? 'active' : ''}`;
+            const date = new Date(session.updated_at).toLocaleDateString();
+            div.innerHTML = `
+                <i data-lucide="message-square"></i>
+                <div class="history-content">
+                    <div class="history-title">${session.title}</div>
+                    <div class="history-date">${date}</div>
+                </div>
+            `;
+            div.onclick = () => loadSessionMessages(session.id, div);
+            list.appendChild(div);
+        });
+        lucide.createIcons();
+    } catch (err) {
+        console.error("Failed to load sessions:", err);
+        list.innerHTML = '<div style="padding: 15px; color: var(--accent-red); font-size: 0.9rem;">Failed to load history</div>';
+    }
+}
+
+async function loadSessionMessages(sessionId, element) {
+    if (!window.supabaseClient) return;
+
+    // Update UI active state
+    document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
+
+    currentSessionId = sessionId;
+    messagesStream.innerHTML = '<div style="text-align: center; padding: 40px;"><i data-lucide="loader-2" class="spin"></i> Loading...</div>';
+    lucide.createIcons();
+
+    try {
+        const { data: messages, error } = await window.supabaseClient
+            .from('chat_messages')
+            .select('*')
+            .eq('session_id', sessionId)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        messagesStream.innerHTML = '';
+        messageHistory = [];
+
+        messages.forEach(msg => {
+            messageHistory.push({ role: msg.role, content: msg.content });
+            renderMessage(msg.content, msg.role); // uses existing logic
+        });
+
+    } catch (err) {
+        console.error("Failed to load messages:", err);
+        messagesStream.innerHTML = '<div style="text-align: center; color: var(--accent-red); padding: 40px;">Failed to load messages</div>';
+    }
+}
 
 async function handleUserMessage(text) {
     if (isTyping) return;
@@ -409,11 +520,51 @@ async function sendGroqChatRequest(latestMessage) {
 }
 
 async function saveInteractionToSupabase(userMsg, aiMsg) {
-    if (!window.supabase) return; // Supabase not loaded
-    const sess = await window.supabase.auth.getSession();
-    if (!sess.data.session) return; // Not logged in
+    if (!window.supabaseClient || !window.currentUser) return; // Supabase not loaded or user not logged in
 
-    // Here we'd map standard UUID logic to chat_sessions / chat_messages
-    // In next phase we create global Session tracking scripts
-    console.log("Saving to Supabase Cloud...");
+    try {
+        console.log("Saving interaction to Cloud DB for user:", window.currentUser.id);
+
+        let sessionId = currentSessionId;
+
+        // 1. If it's a completely new chat, generate a Session container first
+        if (!sessionId) {
+            let titleStr = userMsg;
+            if (titleStr.length > 30) titleStr = titleStr.substring(0, 30) + '...';
+
+            const { data: newSession, error: sessionErr } = await window.supabaseClient
+                .from('chat_sessions')
+                .insert([{
+                    user_id: window.currentUser.id,
+                    title: titleStr
+                }])
+                .select()
+                .single();
+
+            if (sessionErr) throw sessionErr;
+            
+            sessionId = newSession.id;
+            currentSessionId = sessionId; // Locally lock into this session
+
+            // Refresh the sidebar instantly to show the brand new session!
+            loadChatHistory();
+        } else {
+            // Touch the session so it pops to the "top" of the "Last Updated" sequence
+            await window.supabaseClient.from('chat_sessions').update({ updated_at: new Date() }).eq('id', sessionId);
+        }
+
+        // 2. Insert both the human prompt and the system response
+        const messagesToInsert = [
+            { session_id: sessionId, user_id: window.currentUser.id, role: 'user', content: userMsg },
+            { session_id: sessionId, user_id: window.currentUser.id, role: 'assistant', content: aiMsg }
+        ];
+
+        const { error: msgErr } = await window.supabaseClient
+            .from('chat_messages')
+            .insert(messagesToInsert);
+
+        if (msgErr) throw msgErr;
+    } catch (err) {
+        console.error("Silently failed to save messages to DB:", err);
+    }
 }

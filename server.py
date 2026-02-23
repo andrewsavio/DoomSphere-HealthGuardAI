@@ -46,12 +46,14 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print(f"[HealthGuard AI] ⚠️ Failed to initialize Supabase client: {e}")
 
-def _save_to_supabase(data_dict, image_bytes):
+def _save_to_supabase(data_dict, image_bytes, user_id=None):
     if not SUPABASE_URL or not SUPABASE_KEY:
         print("[HealthGuard AI] ⚠️ Supabase credentials missing locally.")
         return
     try:
         payload = dict(data_dict)
+        if user_id:
+            payload["user_id"] = user_id
         if image_bytes:
             payload["scan_image_base64"] = base64.b64encode(image_bytes).decode('utf-8')
         headers = {
@@ -123,8 +125,8 @@ def allowed_file(filename):
 
 @app.route("/")
 def serve_root():
-    # Redirect root to analyze page as the default landing
-    return send_from_directory("frontend", "index.html")
+    # Redirect root to login page as the default landing
+    return send_from_directory("frontend", "login.html")
 
 @app.route("/analyze")
 def serve_analyze():
@@ -147,6 +149,11 @@ def serve_chatbot_index():
 @app.route("/login/")
 def serve_login():
     return send_from_directory("frontend", "login.html")
+
+@app.route("/admin")
+@app.route("/admin/")
+def serve_admin():
+    return send_from_directory("frontend", "admin.html")
 
 
 @app.route("/<path:path>")
@@ -224,6 +231,7 @@ def analyze_scan():
         scan_type_input = request.form.get("scan_type", "")
         body_part = request.form.get("body_part", "")
         patient_description = request.form.get("patient_description", "")
+        user_id = request.form.get("user_id", "")
         
         # Check for pre-analyzed result from Puter.js (frontend free AI)
         puter_result = None
@@ -296,7 +304,8 @@ def analyze_scan():
                     "severity": analysis_result["overall_severity"],
                     "file_name": report_filename,
                     "file_size_kb": file_size_kb,
-                    "storage_path": storage_path
+                    "storage_path": storage_path,
+                    "user_id": user_id if user_id else None
                 }).execute()
                 print("[HealthGuard AI] ✅ Created DB record for PDF report.")
 
@@ -352,7 +361,7 @@ def analyze_scan():
             },
         }
         # Async-capable push to Supabase
-        threading.Thread(target=_save_to_supabase, args=(response, image_bytes)).start()
+        threading.Thread(target=_save_to_supabase, args=(response, image_bytes, user_id)).start()
 
         return jsonify(response), 200
 
@@ -733,6 +742,7 @@ def analyze_batch():
     scan_type_input = request.form.get("scan_type", "")
     body_part = request.form.get("body_part", "")
     patient_description = request.form.get("patient_description", "")
+    user_id = request.form.get("user_id", "")
 
     # Check for pre-analyzed result from Puter.js (frontend free AI)
     puter_result = None
@@ -836,7 +846,7 @@ def analyze_batch():
                 },
             }
             results.append(result_payload)
-            threading.Thread(target=_save_to_supabase, args=(result_payload, image_bytes)).start()
+            threading.Thread(target=_save_to_supabase, args=(result_payload, image_bytes, user_id)).start()
 
         except Exception as e:
             import traceback

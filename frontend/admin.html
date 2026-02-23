@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard AI — Admin Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+
+    <style>
+        .admin-container {
+            padding: 100px 40px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-title {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--cyan));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(12px);
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .panel-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .data-table td {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.admin {
+            background: rgba(108, 99, 255, 0.2);
+            color: var(--primary);
+        }
+
+        .badge.user {
+            background: rgba(26, 219, 184, 0.2);
+            color: var(--cyan);
+        }
+
+        .badge.high {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .badge.medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .badge.low {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-sm:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="bg-primary">
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">HealthGuard</span>
+                <span class="brand-badge">Admin</span>
+            </div>
+        </div>
+        <div class="nav-links">
+            <div id="userProfileMenu" class="user-profile-menu"
+                style="display: flex; align-items: center; gap: 8px; margin-left: 10px;">
+                <div
+                    style="display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <i data-lucide="user" style="width: 14px; height: 14px; margin-right: 2px;"></i>
+                    <span id="profileName" style="font-size: 0.85rem; font-weight: 500;">Admin</span>
+                </div>
+                <button id="logoutBtn" class="btn btn-sm"
+                    style="background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: none; padding: 6px 12px; margin-left: 4px;"><i
+                        data-lucide="log-out" style="width: 14px; height: 14px;"></i> Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="admin-container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">System Overview</h1>
+        </div>
+
+        <!-- Users Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <i data-lucide="users"></i> Registered Users
+            </div>
+            <div id="usersLoading" class="loading-spinner">
+                <i data-lucide="loader-2" class="spin"></i> Loading users...
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="usersTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email / Contact</th>
+                            <th>Role</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Reports Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <i data-lucide="file-text"></i> Medical Scan Reports
+            </div>
+            <div id="reportsLoading" class="loading-spinner">
+                <i data-lucide="loader-2" class="spin"></i> Loading reports...
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="reportsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Modality</th>
+                            <th>Severity</th>
+                            <th>Size</th>
+                            <th>Date generated</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chat Sessions Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <i data-lucide="message-square"></i> Chat Sessions
+            </div>
+            <div id="chatsLoading" class="loading-spinner">
+                <i data-lucide="loader-2" class="spin"></i> Loading chat sessions...
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="chatsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Session Title</th>
+                            <th>Created At</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chatsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chat Messages Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <i data-lucide="messages-square"></i> Chat Messages
+            </div>
+            <div id="messagesLoading" class="loading-spinner">
+                <i data-lucide="loader-2" class="spin"></i> Loading chat messages...
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="messagesTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Session ID</th>
+                            <th>Role</th>
+                            <th>Message Content</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="messagesBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Scan Results Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <i data-lucide="activity"></i> Raw Scan Results Data
+            </div>
+            <div id="resultsLoading" class="loading-spinner">
+                <i data-lucide="loader-2" class="spin"></i> Loading raw scan results...
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="resultsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Session ID</th>
+                            <th>Scan Type</th>
+                            <th>Severity</th>
+                            <th>Primary Finding</th>
+                            <th>Has Image?</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Raw Files Panel -->
+        <div class="panel">
+            <div class="panel-header">
+                <i data-lucide="database"></i> System Files (Raw Storage)
+            </div>
+            <div id="filesLoading" class="loading-spinner">
+                <i data-lucide="loader-2" class="spin"></i> Scanning storage buckets...
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="filesTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Preview</th>
+                            <th>Bucket</th>
+                            <th>Patient / Session Name</th>
+                            <th>File Name</th>
+                            <th>Created At</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="filesBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        lucide.createIcons();
+
+        let sbClient = null;
+
+        async function initAdmin() {
+            try {
+                // Fetch config
+                const res = await fetch('/api/config');
+                const config = await res.json();
+
+                if (!config.supabase_url || !config.supabase_anon_key) {
+                    alert("Supabase keys are missing from the server.");
+                    return;
+                }
+
+                sbClient = supabase.createClient(config.supabase_url, config.supabase_anon_key);
+
+                // Check auth
+                const { data: { session }, error } = await sbClient.auth.getSession();
+                if (error || !session) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                // Get the user name
+                let displayName = "Admin";
+                if (session.user.user_metadata && session.user.user_metadata.full_name) {
+                    displayName = session.user.user_metadata.full_name.split(' ')[0];
+                } else if (session.user.email) {
+                    displayName = session.user.email.split('@')[0];
+                }
+                document.getElementById('profileName').textContent = displayName;
+
+                // Setup logout
+                document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    await sbClient.auth.signOut();
+                    window.location.href = '/login';
+                });
+
+                // Load data
+                loadUsers();
+                loadReports();
+                loadScanResults();
+                loadChatSessions();
+                loadChatMessages();
+                loadStorageFiles();
+
+            } catch (err) {
+                console.error("Initialization error:", err);
+                alert("Failed to initialize admin dashboard.");
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const { data, error } = await sbClient.from('profiles').select('*').order('updated_at', { ascending: false });
+
+                document.getElementById('usersLoading').style.display = 'none';
+
+                if (error) {
+                    console.error("Error loading users:", error);
+                    return; // RLS might prevent this without service role, we try our best.
+                }
+
+                const tbody = document.getElementById('usersBody');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No users found or lack permission</td></tr>';
+                } else {
+                    data.forEach(user => {
+                        const tr = document.createElement('tr');
+                        const roleClass = user.role === 'admin' ? 'admin' : 'user';
+                        const date = user.updated_at ? new Date(user.updated_at).toLocaleDateString() : 'N/A';
+
+                        tr.innerHTML = `
+                            <td><strong>${user.full_name || 'Anonymous'}</strong></td>
+                            <td>${user.email || user.phone || 'N/A'}</td>
+                            <td><span class="badge ${roleClass}">${user.role || 'patient'}</span></td>
+                            <td>${date}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                document.getElementById('usersTable').style.display = 'table';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('usersLoading').innerHTML = 'Error loading users';
+            }
+        }
+
+        async function loadReports() {
+            try {
+                const { data, error } = await sbClient.from('scan_reports').select('*').order('created_at', { ascending: false });
+
+                document.getElementById('reportsLoading').style.display = 'none';
+
+                if (error) throw error;
+
+                const tbody = document.getElementById('reportsBody');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No reports generated yet</td></tr>';
+                } else {
+                    data.forEach(report => {
+                        const tr = document.createElement('tr');
+                        const sev = report.severity ? report.severity.toLowerCase() : 'low';
+                        const size = report.file_size_kb ? Math.round(report.file_size_kb) + ' KB' : 'Unknown';
+                        const date = new Date(report.created_at).toLocaleString();
+
+                        // Storage URL
+                        const { data: urlData } = sbClient.storage.from('reports').getPublicUrl(report.storage_path);
+                        const downloadUrl = urlData.publicUrl;
+
+                        tr.innerHTML = `
+                            <td><strong>${report.patient_name || 'Anonymous'}</strong></td>
+                            <td>${report.scan_type || 'Unknown'}</td>
+                            <td><span class="badge ${sev}">${report.severity || 'LOW'}</span></td>
+                            <td>${size}</td>
+                            <td>${date}</td>
+                            <td><a href="${downloadUrl}" target="_blank" class="btn-sm"><i data-lucide="download" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: text-bottom;"></i> View PDF</a></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                document.getElementById('reportsTable').style.display = 'table';
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('reportsLoading').innerHTML = 'Error loading reports';
+            }
+        }
+
+        async function loadChatSessions() {
+            try {
+                const { data, error } = await sbClient.from('chat_sessions').select('*').order('created_at', { ascending: false });
+
+                document.getElementById('chatsLoading').style.display = 'none';
+
+                if (error) throw error;
+
+                const tbody = document.getElementById('chatsBody');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No chat sessions found</td></tr>';
+                } else {
+                    data.forEach(session => {
+                        const tr = document.createElement('tr');
+                        const created = new Date(session.created_at).toLocaleString();
+                        const updated = new Date(session.updated_at).toLocaleString();
+                        const userIdShort = session.user_id ? session.user_id.substring(0, 8) + '...' : 'Unknown';
+
+                        tr.innerHTML = `
+                            <td><span class="badge" style="background: rgba(108, 99, 255, 0.1); color: var(--primary);">${userIdShort}</span></td>
+                            <td><strong>${session.title || 'Untitled Session'}</strong></td>
+                            <td>${created}</td>
+                            <td>${updated}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                document.getElementById('chatsTable').style.display = 'table';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('chatsLoading').innerHTML = 'Error loading chat sessions. (May be hidden by RLS)';
+            }
+        }
+
+        async function loadChatMessages() {
+            try {
+                const { data, error } = await sbClient.from('chat_messages').select('*').order('created_at', { ascending: false }).limit(50);
+
+                document.getElementById('messagesLoading').style.display = 'none';
+
+                if (error) throw error;
+                const tbody = document.getElementById('messagesBody');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No chat messages found</td></tr>';
+                } else {
+                    data.forEach(msg => {
+                        const tr = document.createElement('tr');
+                        const created = new Date(msg.created_at).toLocaleString();
+                        const sessionShort = msg.session_id ? msg.session_id.substring(0, 8) + '...' : 'Unknown';
+                        let contentShort = msg.content || '';
+                        if (contentShort.length > 80) contentShort = contentShort.substring(0, 80) + '...';
+
+                        const roleStyle = msg.role === 'assistant' ? 'color: var(--cyan);' : 'color: var(--primary);';
+
+                        tr.innerHTML = `
+                            <td><span class="badge" style="background: rgba(255, 255, 255, 0.1);">${sessionShort}</span></td>
+                            <td><strong style="${roleStyle} text-transform: uppercase; font-size: 0.8rem;">${msg.role}</strong></td>
+                            <td style="font-size: 0.9rem;">${contentShort}</td>
+                            <td>${created}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                document.getElementById('messagesTable').style.display = 'table';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('messagesLoading').innerHTML = 'Error loading messages';
+            }
+        }
+
+        async function loadScanResults() {
+            try {
+                const { data, error } = await sbClient.from('scan_results').select('session_id, scan_type, analysis, images, created_at, scan_image_base64').order('created_at', { ascending: false });
+
+                document.getElementById('resultsLoading').style.display = 'none';
+
+                if (error) throw error;
+                const tbody = document.getElementById('resultsBody');
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No raw scan results found</td></tr>';
+                } else {
+                    data.forEach(res => {
+                        const tr = document.createElement('tr');
+                        const s_type = res.scan_type ? (res.scan_type.scan_type || 'Unknown') : 'Unknown';
+                        const sev = res.analysis ? res.analysis.overall_severity : 'Low';
+                        const pf = res.analysis ? res.analysis.primary_finding : 'None';
+                        const hasImg = res.scan_image_base64 ? '✅ Yes' : '❌ No';
+
+                        const sevClass = sev ? sev.toLowerCase() : 'low';
+
+                        tr.innerHTML = `
+                            <td><span class="badge" style="background: rgba(255, 255, 255, 0.1);">${res.session_id}</span></td>
+                            <td>${s_type}</td>
+                            <td><span class="badge ${sevClass}">${sev}</span></td>
+                            <td>${pf}</td>
+                            <td>${hasImg}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+                document.getElementById('resultsTable').style.display = 'table';
+            } catch (err) {
+                console.error(err);
+                document.getElementById('resultsLoading').innerHTML = 'Error loading scan results.';
+            }
+        }
+
+        async function loadStorageFiles() {
+            try {
+                const tbody = document.getElementById('filesBody');
+                document.getElementById('filesLoading').style.display = 'none';
+
+                let allFiles = [];
+
+                // Fetch mapping for patient names correctly aligning to session IDs
+                const { data: reportsData } = await sbClient.from('scan_reports').select('session_id, patient_name');
+                const patientMap = {};
+                if (reportsData) {
+                    reportsData.forEach(r => {
+                        patientMap[r.session_id] = r.patient_name || 'Anonymous Patient';
+                    });
+                }
+
+                // Helper to fetch deeply nested items
+                async function fetchRecursive(bucketName) {
+                    const { data: rootItems } = await sbClient.storage.from(bucketName).list('');
+                    if (!rootItems) return;
+
+                    for (const item of rootItems) {
+                        if (item.name === '.emptyFolderPlaceholder') continue;
+
+                        // If it doesn't have an ID or has metadata, it might be a folder without file metadata
+                        if (!item.id || item.metadata === null || item.id === null) {
+                            // It's a folder, search inside
+                            const { data: subItems } = await sbClient.storage.from(bucketName).list(item.name);
+                            if (subItems) {
+                                subItems.forEach(sub => {
+                                    if (sub.name !== '.emptyFolderPlaceholder') {
+                                        allFiles.push({
+                                            bucket: bucketName,
+                                            path: `${item.name}/${sub.name}`,
+                                            folder: item.name,
+                                            file: sub
+                                        });
+                                    }
+                                });
+                            }
+                        } else {
+                            // It's a file at root
+                            allFiles.push({ bucket: bucketName, path: item.name, folder: 'Root', file: item });
+                        }
+                    }
+                }
+
+                await fetchRecursive('reports');
+                await fetchRecursive('chat_images');
+
+                if (allFiles.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No raw files found (buckets may be empty)</td></tr>';
+                } else {
+                    allFiles.forEach(item => {
+                        const tr = document.createElement('tr');
+                        const date = item.file.created_at ? new Date(item.file.created_at).toLocaleString() : 'N/A';
+                        const { data: urlData } = sbClient.storage.from(item.bucket).getPublicUrl(item.path);
+
+                        // Extract Patient Identity
+                        const identity = patientMap[item.folder] || item.folder;
+
+                        // Check if Image
+                        const m = item.file.metadata?.mimetype || '';
+                        const n = item.file.name.toLowerCase();
+                        const isImage = m.startsWith('image') || n.endsWith('.png') || n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.webp');
+
+                        const previewHtml = isImage
+                            ? `<img src="${urlData.publicUrl}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);">`
+                            : `<div style="width: 48px; height: 48px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;"><i data-lucide="file" style="opacity: 0.5;"></i></div>`;
+
+                        tr.innerHTML = `
+                            <td>${previewHtml}</td>
+                            <td><span class="badge" style="background: rgba(255,255,255,0.1);">${item.bucket}</span></td>
+                            <td><strong style="color: var(--cyan);">${identity}</strong></td>
+                            <td>${item.file.name}</td>
+                            <td>${date}</td>
+                            <td><a href="${urlData.publicUrl}" target="_blank" class="btn-sm">Open</a></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+                document.getElementById('filesTable').style.display = 'table';
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('filesLoading').innerHTML = 'Error communicating with storage API';
+            }
+        }
+
+        // Add scrolled class to navbar
+        window.addEventListener("scroll", () => {
+            if (window.scrollY > 40) {
+                document.getElementById("navbar").classList.add("scrolled");
+            } else {
+                document.getElementById("navbar").classList.remove("scrolled");
+            }
+        });
+
+        // Fire Initialization
+        initAdmin();
+    </script>
+</body>
+
+</html>

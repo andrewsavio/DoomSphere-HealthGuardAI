@@ -28,8 +28,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const navbar = document.getElementById("navbar");
     const authStatusText = document.getElementById("authStatusText");
     const navAuthLink = document.getElementById("navAuthLink");
+    const userProfileMenu = document.getElementById("userProfileMenu");
+    const profileName = document.getElementById("profileName");
+    const logoutBtn = document.getElementById("logoutBtn");
 
     // ---------- Global Config & Auth State ----------
+    const API_BASE = window.location.origin;
     window.AppConfig = {};
     window.currentUser = null;
 
@@ -90,9 +94,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            if (navAuthLink) {
+            if (userProfileMenu && profileName && logoutBtn) {
+                userProfileMenu.style.display = 'flex';
+                profileName.textContent = displayName;
+                if (navAuthLink) navAuthLink.style.display = 'none';
+
+                logoutBtn.onclick = async () => {
+                    await window.supabaseClient.auth.signOut();
+                    window.location.reload();
+                };
+            } else if (navAuthLink) {
                 navAuthLink.style.display = 'block';
-                navAuthLink.textContent = "Logout";
+                navAuthLink.innerHTML = `<i data-lucide="log-out"></i> Logout`;
                 navAuthLink.href = "#";
                 navAuthLink.onclick = async (e) => {
                     e.preventDefault();
@@ -105,9 +118,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (authStatusText) {
                 authStatusText.textContent = "System Online";
             }
+            if (userProfileMenu) userProfileMenu.style.display = 'none';
             if (navAuthLink) {
                 navAuthLink.style.display = 'block';
-                navAuthLink.textContent = "Login";
+                navAuthLink.innerHTML = `Login`;
                 navAuthLink.href = "/login";
                 navAuthLink.onclick = null;
             }
@@ -172,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let batchReportFilenames = [];  // for Download All
 
     // ---------- API Base URL ----------
-    const API_BASE = window.location.origin;
 
     // ---------- Rating labels ----------
     const ratingLabels = [
@@ -521,6 +534,10 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
             if (scanType) formData.append("scan_type", scanType);
             if (bodyPart) formData.append("body_part", bodyPart);
             if (patientDesc) formData.append("patient_description", patientDesc);
+
+            if (window.currentUser && window.currentUser.id) {
+                formData.append("user_id", window.currentUser.id);
+            }
 
             // ---- Try Puter.js free AI analysis first (for any upload) ----
             // Try on the first file to verify Puter is working
