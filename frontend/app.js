@@ -26,6 +26,101 @@ document.addEventListener("DOMContentLoaded", () => {
     const newScanBtn = document.getElementById("newScanBtn");
     const navStatus = document.getElementById("navStatus");
     const navbar = document.getElementById("navbar");
+    const authStatusText = document.getElementById("authStatusText");
+    const navAuthLink = document.getElementById("navAuthLink");
+
+    // ---------- Global Config & Auth State ----------
+    window.AppConfig = {};
+    window.currentUser = null;
+
+    async function initializeSystemConfig() {
+        try {
+            const res = await fetch(`${API_BASE}/api/config`);
+            if (res.ok) {
+                window.AppConfig = await res.json();
+
+                // Init Supabase if loaded
+                if (window.supabase && AppConfig.supabase_url && AppConfig.supabase_anon_key) {
+                    window.supabaseClient = supabase.createClient(
+                        AppConfig.supabase_url,
+                        AppConfig.supabase_anon_key
+                    );
+
+                    // Trigger global Auth listener
+                    setupAuthListener();
+                } else if (window.supabase) {
+                    console.warn("Supabase keys missing. Check .env!");
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch system config:", err);
+        }
+    }
+
+    function setupAuthListener() {
+        if (!window.supabaseClient) return;
+
+        // Immediately check current session
+        window.supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            handleAuthChange(session);
+        });
+
+        // Listen for changes
+        window.supabaseClient.auth.onAuthStateChange((_event, session) => {
+            handleAuthChange(session);
+        });
+    }
+
+    function handleAuthChange(session) {
+        if (session && session.user) {
+            window.currentUser = session.user;
+
+            // Name resolution
+            let displayName = "Student";
+            if (session.user.user_metadata && session.user.user_metadata.full_name) {
+                displayName = session.user.user_metadata.full_name.split(' ')[0];
+            } else if (session.user.email) {
+                displayName = session.user.email.split('@')[0];
+            }
+
+            if (authStatusText) {
+                authStatusText.innerHTML = `Welcome, <b>${displayName}</b>`;
+                if (navStatus.querySelector('.status-dot')) {
+                    navStatus.querySelector('.status-dot').style.background = "var(--accent-green)";
+                }
+            }
+
+            if (navAuthLink) {
+                navAuthLink.style.display = 'block';
+                navAuthLink.textContent = "Logout";
+                navAuthLink.href = "#";
+                navAuthLink.onclick = async (e) => {
+                    e.preventDefault();
+                    await window.supabaseClient.auth.signOut();
+                    window.location.reload();
+                };
+            }
+        } else {
+            window.currentUser = null;
+            if (authStatusText) {
+                authStatusText.textContent = "System Online";
+            }
+            if (navAuthLink) {
+                navAuthLink.style.display = 'block';
+                navAuthLink.textContent = "Login";
+                navAuthLink.href = "/login";
+                navAuthLink.onclick = null;
+            }
+
+            // Route protection
+            if (window.location.pathname === '/chatbot') {
+                window.location.href = '/login';
+            }
+        }
+    }
+
+    // Call init
+    initializeSystemConfig();
 
     // Feedback DOM References
     const feedbackForm = document.getElementById("feedbackForm");
@@ -119,31 +214,35 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ---------- File Upload ----------
-    uploadZone.addEventListener("click", () => fileInput.click());
+    if (uploadZone) {
+        uploadZone.addEventListener("click", () => fileInput.click());
 
-    uploadZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        uploadZone.classList.add("drag-over");
-    });
+        uploadZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            uploadZone.classList.add("drag-over");
+        });
 
-    uploadZone.addEventListener("dragleave", () => {
-        uploadZone.classList.remove("drag-over");
-    });
+        uploadZone.addEventListener("dragleave", () => {
+            uploadZone.classList.remove("drag-over");
+        });
 
-    uploadZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        uploadZone.classList.remove("drag-over");
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFiles(files);
-        }
-    });
+        uploadZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove("drag-over");
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
+        });
+    }
 
-    fileInput.addEventListener("change", (e) => {
-        if (e.target.files.length > 0) {
-            handleFiles(e.target.files);
-        }
-    });
+    if (fileInput) {
+        fileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+    }
 
     function handleFiles(fileList) {
         const validFiles = [];
@@ -188,9 +287,11 @@ document.addEventListener("DOMContentLoaded", () => {
         lucide.createIcons();
     }
 
-    removeFileBtn.addEventListener("click", () => {
-        resetUpload();
-    });
+    if (removeFileBtn) {
+        removeFileBtn.addEventListener("click", () => {
+            resetUpload();
+        });
+    }
 
     function resetUpload() {
         selectedFiles = [];
@@ -207,10 +308,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ---------- Analyze ----------
-    analyzeBtn.addEventListener("click", () => {
-        if (selectedFiles.length === 0) return;
-        startAnalysis();
-    });
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener("click", () => {
+            if (selectedFiles.length === 0) return;
+            startAnalysis();
+        });
+    }
 
     // ---------- Puter.js Free AI Analysis (try before API keys) ----------
     async function tryPuterAnalysis(file, patientName, scanType, bodyPart, patientDescription) {
@@ -370,10 +473,36 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
         try {
             const formData = new FormData();
-
-            // Append all files under 'images' key (for batch) or 'image' (single)
             const isBatch = selectedFiles.length > 1;
-            selectedFiles.forEach((f) => {
+
+            // ---------- COMPRESS IMAGES ----------
+            const compressPromises = selectedFiles.map(file => {
+                return new Promise((resolve) => {
+                    if (typeof Compressor === 'undefined') {
+                        console.warn("[Compressor] Compressor is not defined (likely cached HTML or blocked CDN). Using original image.");
+                        resolve(file);
+                        return;
+                    }
+
+                    new Compressor(file, {
+                        quality: 0.6,
+                        maxWidth: 1600,
+                        maxHeight: 1600,
+                        success(result) {
+                            resolve(new File([result], file.name, { type: result.type || 'image/jpeg' }));
+                        },
+                        error(err) {
+                            console.warn("[Compressor] Failed, using original:", err);
+                            resolve(file); // fallback
+                        }
+                    });
+                });
+            });
+
+            const processedFiles = await Promise.all(compressPromises);
+
+            // Append compressed files under 'images' key (for batch) or 'image' (single)
+            processedFiles.forEach((f) => {
                 formData.append(isBatch ? "images" : "image", f);
             });
 
@@ -397,7 +526,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
             // Try on the first file to verify Puter is working
             console.log("[Puter] Starting Puter.js analysis attempt...");
             const puterResult = await tryPuterAnalysis(
-                selectedFiles[0], patientName, scanType, bodyPart, patientDesc
+                processedFiles[0], patientName, scanType, bodyPart, patientDesc
             );
             if (puterResult) {
                 formData.append("puter_result", JSON.stringify(puterResult));
@@ -685,8 +814,8 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
         // const scanBars = document.getElementById("scanTypeBars");
         // ... (removed logic)
 
-        // Report URL
-        currentReportUrl = data.report.download_url;
+        // Report URL (Prefer Supabase Cloud CDN if configured)
+        currentReportUrl = data.report.supabase_report_url || data.report.download_url;
 
         // Medical Visualization
         const medicalVizPanel = document.getElementById("medicalVizPanel");
@@ -712,23 +841,32 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
         // Scroll to results
         resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+
+        // ---------- AUTO-TRAIN THE MODEL ----------
+        // Send the AI/API result natively back as ground truth immediately
+        autoTrainModel(data);
     }
 
     // ---------- Download PDF ----------
-    downloadPdfBtn.addEventListener("click", () => {
-        if (currentReportUrl) {
-            window.open(currentReportUrl, "_blank");
-        }
-    });
+    if (downloadPdfBtn) {
+        downloadPdfBtn.addEventListener("click", () => {
+            if (currentReportUrl) {
+                window.open(currentReportUrl, "_blank");
+            }
+        });
+    }
 
     // ---------- New Scan ----------
-    newScanBtn.addEventListener("click", () => {
-        resetUpload();
-        resultsSection.classList.add("hidden");
-        const batchSec = document.getElementById("batchResultsSection");
-        if (batchSec) batchSec.classList.add("hidden");
-        document.getElementById("upload").scrollIntoView({ behavior: "smooth" });
-    });
+    if (newScanBtn) {
+        newScanBtn.addEventListener("click", () => {
+            resetUpload();
+            if (resultsSection) resultsSection.classList.add("hidden");
+            const batchSec = document.getElementById("batchResultsSection");
+            if (batchSec) batchSec.classList.add("hidden");
+            const uploadEl = document.getElementById("upload");
+            if (uploadEl) uploadEl.scrollIntoView({ behavior: "smooth" });
+        });
+    }
 
     // ---------- Batch Results (Accordion) ----------
     function displayBatchResults(resultsArray) {
@@ -774,7 +912,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                     ${!result.error ? `<span class="accordion-severity" style="color:${severityColor}">${severityLabel}</span>` : `<span class="accordion-error-badge">ERROR</span>`}
                 </div>
                 <div class="accordion-header-right">
-                    ${!result.error ? `<button class="btn btn-ghost btn-sm accordion-download-btn" data-url="${result.report.download_url}" title="Download PDF"><i data-lucide="download"></i></button>` : ""}
+                    ${!result.error ? `<button class="btn btn-ghost btn-sm accordion-download-btn" data-url="${result.report.supabase_report_url || result.report.download_url}" title="Download PDF"><i data-lucide="download"></i></button>` : ""}
                     <i data-lucide="chevron-down" class="accordion-chevron"></i>
                 </div>
             `;
@@ -818,6 +956,46 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
         batchSection.classList.remove("hidden");
         lucide.createIcons();
         batchSection.scrollIntoView({ behavior: "smooth", block: "start" });
+
+        // ---------- AUTO-TRAIN THE MODEL ----------
+        // Send successful batch AI/API results natively back as ground truth
+        resultsArray.filter(r => !r.error).forEach(result => {
+            autoTrainModel(result);
+        });
+    }
+
+    // ---------- AUTO-TRAIN BACKGROUND API FUNCTION ----------
+    async function autoTrainModel(data) {
+        if (!data || !data.session_id) return;
+
+        try {
+            console.log(`[Auto-Train] 🤖 Sending automatic training data back to DenseNet-121 for session: ${data.session_id}...`);
+
+            const payload = {
+                session_id: data.session_id,
+                correct_finding: data.analysis.primary_finding,
+                severity_correction: data.analysis.overall_severity,
+                notes: "Auto-trained from API & Puter.js results immediately upon client delivery.",
+                description: data.analysis.description || "Synthesized finding automatically verified by auxiliary AI.",
+                rating: 5, // Treat API as ground truth
+                scan_type: data.scan_type.scan_type || "Unknown"
+            };
+
+            const response = await fetch(`/api/feedback`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`[Auto-Train] ✅ Model successfully trained on scan! Loss: ${result.loss}`);
+            } else {
+                console.warn("[Auto-Train] ⚠️ Background training request failed.", await response.text());
+            }
+        } catch (e) {
+            console.error("[Auto-Train] ❌ Error triggering background auto-train:", e);
+        }
     }
 
     function buildAccordionBodyHTML(result) {
@@ -938,24 +1116,26 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
     // =============================================
 
     // ---------- Star Rating ----------
-    const starBtns = starRating.querySelectorAll(".star-btn");
-    starBtns.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            selectedRating = parseInt(btn.dataset.rating);
-            updateStarDisplay();
-        });
+    const starBtns = starRating ? starRating.querySelectorAll(".star-btn") : [];
+    if (starBtns.length > 0) {
+        starBtns.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                selectedRating = parseInt(btn.dataset.rating);
+                updateStarDisplay();
+            });
 
-        btn.addEventListener("mouseenter", () => {
-            const hoverRating = parseInt(btn.dataset.rating);
-            highlightStars(hoverRating);
-            ratingText.textContent = ratingLabels[hoverRating];
-        });
+            btn.addEventListener("mouseenter", () => {
+                const hoverRating = parseInt(btn.dataset.rating);
+                highlightStars(hoverRating);
+                ratingText.textContent = ratingLabels[hoverRating];
+            });
 
-        btn.addEventListener("mouseleave", () => {
-            highlightStars(selectedRating);
-            ratingText.textContent = selectedRating > 0 ? ratingLabels[selectedRating] : "Select a rating";
+            btn.addEventListener("mouseleave", () => {
+                highlightStars(selectedRating);
+                ratingText.textContent = selectedRating > 0 ? ratingLabels[selectedRating] : "Select a rating";
+            });
         });
-    });
+    }
 
     function updateStarDisplay() {
         highlightStars(selectedRating);
@@ -974,25 +1154,29 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
     }
 
     // ---------- Severity Buttons ----------
-    const sevBtns = severityButtons.querySelectorAll(".severity-btn");
-    sevBtns.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            selectedSeverity = btn.dataset.severity;
-            sevBtns.forEach((b) => b.classList.remove("active"));
-            btn.classList.add("active");
+    const sevBtns = severityButtons ? severityButtons.querySelectorAll(".severity-btn") : [];
+    if (sevBtns.length > 0) {
+        sevBtns.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                selectedSeverity = btn.dataset.severity;
+                sevBtns.forEach((b) => b.classList.remove("active"));
+                btn.classList.add("active");
+            });
         });
-    });
+    }
 
     // ---------- Custom Finding Toggle ----------
-    correctFinding.addEventListener("change", () => {
-        if (correctFinding.value === "__other__") {
-            customFindingWrapper.classList.remove("hidden");
-            customFindingInput.focus();
-        } else {
-            customFindingWrapper.classList.add("hidden");
-            customFindingInput.value = "";
-        }
-    });
+    if (correctFinding && customFindingWrapper) {
+        correctFinding.addEventListener("change", () => {
+            if (correctFinding.value === "__other__") {
+                customFindingWrapper.classList.remove("hidden");
+                customFindingInput.focus();
+            } else {
+                customFindingWrapper.classList.add("hidden");
+                customFindingInput.value = "";
+            }
+        });
+    }
 
     // ---------- Reset Feedback Form ----------
     function resetFeedbackForm() {
@@ -1015,215 +1199,221 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
     }
 
     // ---------- Submit Feedback ----------
-    submitFeedbackBtn.addEventListener("click", async () => {
-        if (!currentSessionId) {
-            alert("No active session. Please analyze a scan first.");
-            return;
-        }
-
-        if (selectedRating === 0) {
-            alert("Please select an accuracy rating.");
-            return;
-        }
-
-        if (!correctFinding.value) {
-            alert("Please select the correct medical finding.");
-            return;
-        }
-
-        // Validate custom finding if 'Other' is selected
-        if (correctFinding.value === "__other__" && !customFindingInput.value.trim()) {
-            alert("Please type the custom medical finding name.");
-            customFindingInput.focus();
-            return;
-        }
-
-        // Disable button
-        submitFeedbackBtn.disabled = true;
-        submitFeedbackBtn.querySelector("span").textContent = "Training AI Model...";
-
-        // Determine final finding
-        let finalFinding = correctFinding.value;
-        let isCustom = false;
-        if (finalFinding === "__other__") {
-            finalFinding = customFindingInput.value.trim();
-            isCustom = true;
-        }
-
-        // Get edited scan type
-        const feedbackScanTypeInput = document.getElementById("feedbackScanTypeInput");
-        const editedScanType = feedbackScanTypeInput ? feedbackScanTypeInput.value : "Unknown";
-
-        // Prepare payload
-        const payload = {
-            session_id: currentSessionId,
-            rating: selectedRating,
-            correct_finding: finalFinding,
-            severity_correction: selectedSeverity,
-            scan_type: editedScanType, // Send the edited scan type
-            notes: feedbackNotes.value,
-            description: feedbackDescription.value,
-            custom_finding_is_new: isCustom,
-        };
-        try {
-            const response = await fetch(`${API_BASE}/api/feedback`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Feedback submission failed");
+    if (submitFeedbackBtn) {
+        submitFeedbackBtn.addEventListener("click", async () => {
+            if (!currentSessionId) {
+                alert("No active session. Please analyze a scan first.");
+                return;
             }
 
-            const result = await response.json();
+            if (selectedRating === 0) {
+                alert("Please select an accuracy rating.");
+                return;
+            }
 
-            // Show success state
-            feedbackForm.classList.add("hidden");
-            feedbackSuccess.classList.remove("hidden");
+            if (!correctFinding.value) {
+                alert("Please select the correct medical finding.");
+                return;
+            }
 
-            // Display feedback message
-            feedbackMessage.textContent = result.message;
+            // Validate custom finding if 'Other' is selected
+            if (correctFinding.value === "__other__" && !customFindingInput.value.trim()) {
+                alert("Please type the custom medical finding name.");
+                customFindingInput.focus();
+                return;
+            }
 
-            // Display mini stats
-            feedbackStatsMini.innerHTML = `
-                <div class="feedback-stat-item">
-                    <span class="feedback-stat-value">${result.feedback_id}</span>
-                    <span class="feedback-stat-label">Feedback ID</span>
-                </div>
-                <div class="feedback-stat-item">
-                    <span class="feedback-stat-value">${result.total_feedbacks}</span>
-                    <span class="feedback-stat-label">Total Feedbacks</span>
-                </div>
-                <div class="feedback-stat-item">
-                    <span class="feedback-stat-value">${result.model_updated ? "✓" : "—"}</span>
-                    <span class="feedback-stat-label">Model Updated</span>
-                </div>
-                ${result.training_steps ? `
-                <div class="feedback-stat-item">
-                    <span class="feedback-stat-value">${result.training_steps}</span>
-                    <span class="feedback-stat-label">Training Steps</span>
-                </div>
-                ` : ""}
-                ${result.loss !== undefined ? `
-                <div class="feedback-stat-item">
-                    <span class="feedback-stat-value">${result.loss}</span>
-                    <span class="feedback-stat-label">Avg Loss</span>
-                </div>
-                ` : ""}
-                ${result.total_findings ? `
-                <div class="feedback-stat-item">
-                    <span class="feedback-stat-value">${result.total_findings}</span>
-                    <span class="feedback-stat-label">Total Findings</span>
-                </div>
-                ` : ""}
-            `;
+            // Disable button
+            submitFeedbackBtn.disabled = true;
+            submitFeedbackBtn.querySelector("span").textContent = "Training AI Model...";
 
-            // Re-init icons
-            lucide.createIcons();
+            // Determine final finding
+            let finalFinding = correctFinding.value;
+            let isCustom = false;
+            if (finalFinding === "__other__") {
+                finalFinding = customFindingInput.value.trim();
+                isCustom = true;
+            }
 
-            // Scroll to feedback success
-            feedbackSuccess.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Get edited scan type
+            const feedbackScanTypeInput = document.getElementById("feedbackScanTypeInput");
+            const editedScanType = feedbackScanTypeInput ? feedbackScanTypeInput.value : "Unknown";
 
-        } catch (err) {
-            alert("Feedback Error: " + err.message);
-            console.error(err);
-        } finally {
-            submitFeedbackBtn.disabled = false;
-            submitFeedbackBtn.querySelector("span").textContent = "Submit Feedback & Train AI";
-        }
-    });
+            // Prepare payload
+            const payload = {
+                session_id: currentSessionId,
+                rating: selectedRating,
+                correct_finding: finalFinding,
+                severity_correction: selectedSeverity,
+                scan_type: editedScanType, // Send the edited scan type
+                notes: feedbackNotes.value,
+                description: feedbackDescription.value,
+                custom_finding_is_new: isCustom,
+            };
+            try {
+                const response = await fetch(`${API_BASE}/api/feedback`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || "Feedback submission failed");
+                }
+
+                const result = await response.json();
+
+                // Show success state
+                feedbackForm.classList.add("hidden");
+                feedbackSuccess.classList.remove("hidden");
+
+                // Display feedback message
+                feedbackMessage.textContent = result.message;
+
+                // Display mini stats
+                feedbackStatsMini.innerHTML = `
+                    <div class="feedback-stat-item">
+                        <span class="feedback-stat-value">${result.feedback_id}</span>
+                        <span class="feedback-stat-label">Feedback ID</span>
+                    </div>
+                    <div class="feedback-stat-item">
+                        <span class="feedback-stat-value">${result.total_feedbacks}</span>
+                        <span class="feedback-stat-label">Total Feedbacks</span>
+                    </div>
+                    <div class="feedback-stat-item">
+                        <span class="feedback-stat-value">${result.model_updated ? "✓" : "—"}</span>
+                        <span class="feedback-stat-label">Model Updated</span>
+                    </div>
+                    ${result.training_steps ? `
+                    <div class="feedback-stat-item">
+                        <span class="feedback-stat-value">${result.training_steps}</span>
+                        <span class="feedback-stat-label">Training Steps</span>
+                    </div>
+                    ` : ""}
+                    ${result.loss !== undefined ? `
+                    <div class="feedback-stat-item">
+                        <span class="feedback-stat-value">${result.loss}</span>
+                        <span class="feedback-stat-label">Avg Loss</span>
+                    </div>
+                    ` : ""}
+                    ${result.total_findings ? `
+                    <div class="feedback-stat-item">
+                        <span class="feedback-stat-value">${result.total_findings}</span>
+                        <span class="feedback-stat-label">Total Findings</span>
+                    </div>
+                    ` : ""}
+                `;
+
+                // Re-init icons
+                lucide.createIcons();
+
+                // Scroll to feedback success
+                feedbackSuccess.scrollIntoView({ behavior: "smooth", block: "center" });
+
+            } catch (err) {
+                alert("Feedback Error: " + err.message);
+                console.error(err);
+            } finally {
+                submitFeedbackBtn.disabled = false;
+                submitFeedbackBtn.querySelector("span").textContent = "Submit Feedback & Train AI";
+            }
+        });
+    }
 
     // ---------- Re-Analyze with Updated Model ----------
-    reanalyzeBtn.addEventListener("click", async () => {
-        if (!currentSessionId) {
-            alert("No active session for re-analysis.");
-            return;
-        }
-
-        // Show loading overlay
-        loadingOverlay.classList.remove("hidden");
-        document.body.style.overflow = "hidden";
-
-        const steps = ["step1", "step2", "step3", "step4"];
-        let currentStep = 0;
-
-        const stepInterval = setInterval(() => {
-            if (currentStep > 0) {
-                document.getElementById(steps[currentStep - 1]).classList.remove("active");
-                document.getElementById(steps[currentStep - 1]).classList.add("done");
-            }
-            if (currentStep < steps.length) {
-                document.getElementById(steps[currentStep]).classList.add("active");
-                progressBar.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
-                currentStep++;
-            }
-        }, 1200);
-
-        try {
-            const response = await fetch(`${API_BASE}/api/reanalyze`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    session_id: currentSessionId,
-                }),
-            });
-
-            clearInterval(stepInterval);
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Re-analysis failed");
+    if (reanalyzeBtn) {
+        reanalyzeBtn.addEventListener("click", async () => {
+            if (!currentSessionId) {
+                alert("No active session for re-analysis.");
+                return;
             }
 
-            const data = await response.json();
+            // Show loading overlay
+            loadingOverlay.classList.remove("hidden");
+            document.body.style.overflow = "hidden";
 
-            // Complete all steps
-            steps.forEach((s) => {
-                const el = document.getElementById(s);
-                el.classList.remove("active");
-                el.classList.add("done");
-            });
-            progressBar.style.width = "100%";
+            const steps = ["step1", "step2", "step3", "step4"];
+            let currentStep = 0;
 
-            await sleep(800);
+            const stepInterval = setInterval(() => {
+                if (currentStep > 0) {
+                    document.getElementById(steps[currentStep - 1]).classList.remove("active");
+                    document.getElementById(steps[currentStep - 1]).classList.add("done");
+                }
+                if (currentStep < steps.length) {
+                    document.getElementById(steps[currentStep]).classList.add("active");
+                    progressBar.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
+                    currentStep++;
+                }
+            }, 1200);
 
-            // Hide loading
-            loadingOverlay.classList.add("hidden");
-            document.body.style.overflow = "";
+            try {
+                const response = await fetch(`${API_BASE}/api/reanalyze`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        session_id: currentSessionId,
+                    }),
+                });
 
-            // Reset step states
-            steps.forEach((s) => {
-                const el = document.getElementById(s);
-                el.classList.remove("active", "done");
-            });
-            progressBar.style.width = "0%";
+                clearInterval(stepInterval);
 
-            // Update results with new data
-            displayResults(data);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || "Re-analysis failed");
+                }
 
-        } catch (err) {
-            clearInterval(stepInterval);
-            loadingOverlay.classList.add("hidden");
-            document.body.style.overflow = "";
+                const data = await response.json();
 
-            steps.forEach((s) => {
-                const el = document.getElementById(s);
-                el.classList.remove("active", "done");
-            });
-            progressBar.style.width = "0%";
+                // Complete all steps
+                steps.forEach((s) => {
+                    const el = document.getElementById(s);
+                    el.classList.remove("active");
+                    el.classList.add("done");
+                });
+                progressBar.style.width = "100%";
 
-            alert("Re-Analysis Error: " + err.message);
-            console.error(err);
-        }
-    });
+                await sleep(800);
+
+                // Hide loading
+                loadingOverlay.classList.add("hidden");
+                document.body.style.overflow = "";
+
+                // Reset step states
+                steps.forEach((s) => {
+                    const el = document.getElementById(s);
+                    el.classList.remove("active", "done");
+                });
+                progressBar.style.width = "0%";
+
+                // Update results with new data
+                displayResults(data);
+
+            } catch (err) {
+                clearInterval(stepInterval);
+                loadingOverlay.classList.add("hidden");
+                document.body.style.overflow = "";
+
+                steps.forEach((s) => {
+                    const el = document.getElementById(s);
+                    el.classList.remove("active", "done");
+                });
+                progressBar.style.width = "0%";
+
+                alert("Re-Analysis Error: " + err.message);
+                console.error(err);
+            }
+        });
+    }
 
     // ---------- Add More Feedback ----------
-    addMoreFeedbackBtn.addEventListener("click", () => {
-        resetFeedbackForm();
-        feedbackForm.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+    if (addMoreFeedbackBtn) {
+        addMoreFeedbackBtn.addEventListener("click", () => {
+            resetFeedbackForm();
+            if (feedbackForm) feedbackForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+    }
 
     // =============================================
     // ========== DATASET TRAINING SYSTEM ==========

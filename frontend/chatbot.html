@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard AI — Health Assistant</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="chatbot-body">
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">HealthGuard</span>
+                <span class="brand-badge">AI</span>
+            </div>
+        </div>
+        <div class="nav-status" id="navStatus">
+            <div class="status-dot pulse"></div>
+            <span id="authStatusText">System Online</span>
+        </div>
+        <div class="nav-links">
+            <a href="/features" class="nav-link">Features</a>
+            <a href="/analyze" class="nav-link">Analyze</a>
+            <a href="/about" class="nav-link">About</a>
+            <a href="/chatbot" class="nav-link active">Chat Bot</a>
+            <!-- Auth Link Will be Injected by JS -->
+            <a href="/login" class="nav-link auth-link" id="navAuthLink" style="display: none;">Login</a>
+        </div>
+    </nav>
+
+    <!-- Chatbot Container -->
+    <main class="chatbot-main-container">
+        <!-- Sidebar -->
+        <aside class="chatbot-sidebar">
+            <div class="sidebar-header">
+                <h3><i data-lucide="history"></i> Chat History</h3>
+                <button class="btn btn-ghost btn-sm" id="newChatBtn" title="New Chat">
+                    <i data-lucide="square-pen"></i>
+                </button>
+            </div>
+            <div class="history-list" id="chatHistoryList">
+                <div class="history-loading">Loading sessions...</div>
+                <!-- Populated by JS -->
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <section class="chat-area">
+            <!-- Header -->
+            <header class="chat-header">
+                <div>
+                    <h2>HealthGuard AI</h2>
+                    <p>Your Personal Healthcare Assistant</p>
+                </div>
+                <div class="chat-actions">
+                    <div class="custom-select-wrapper">
+                        <select id="chatLanguage" class="native-select">
+                            <option value="English">English</option>
+                            <option value="Tamil">Tamil</option>
+                            <option value="Hindi">Hindi</option>
+                            <option value="Bengali">Bengali</option>
+                            <option value="Marathi">Marathi</option>
+                            <option value="Telugu">Telugu</option>
+                            <option value="Gujarati">Gujarati</option>
+                            <option value="Urdu">Urdu</option>
+                            <option value="Kannada">Kannada</option>
+                            <option value="Odia">Odia</option>
+                            <option value="Malayalam">Malayalam</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-icon"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Messages Stream -->
+            <div class="messages-stream" id="messagesStream">
+                <!-- Welcome Message Initial State -->
+                <div class="message system-message welcome-wrapper">
+                    <div class="welcome-box">
+                        <div class="welcome-icon">
+                            <i data-lucide="sparkles"></i>
+                        </div>
+                        <h3>Hello! I'm HealthGuard AI</h3>
+                        <p>I can help you understand medical reports, explain medications, and provide wellness tips.
+                        </p>
+
+                        <div class="quick-prompts">
+                            <button class="quick-prompt-btn">💊 Explain my medication</button>
+                            <button class="quick-prompt-btn">🩸 What does my blood test mean?</button>
+                            <button class="quick-prompt-btn">🏃 Wellness tips for today</button>
+                            <button class="quick-prompt-btn">🍎 Diet recommendations</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <div class="chat-input-wrapper">
+                <div id="chatImagePreviewContainer" class="chat-image-preview-container" style="display: none;">
+                    <img id="chatImagePreview" src="" alt="Preview">
+                    <button type="button" class="remove-image-btn" id="removeChatImageBtn" title="Remove Image"><i
+                            data-lucide="x"></i></button>
+                </div>
+                <form id="chatForm" class="chat-form">
+                    <input type="file" id="chatImageInput" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-ghost chat-upload-btn" id="triggerImageUploadBtn"
+                        title="Attach Medical Image">
+                        <i data-lucide="image-plus"></i>
+                    </button>
+                    <textarea id="chatInput" class="chat-input-field"
+                        placeholder="Ask HealthGuard AI anything about health..." rows="1"></textarea>
+                    <button type="submit" class="btn btn-primary chat-submit-btn" id="sendBtn" disabled>
+                        <i data-lucide="send"></i>
+                    </button>
+                </form>
+                <div class="chat-disclaimer">
+                    HealthGuard AI can make mistakes. Consider verifying important medical information with a doctor.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://js.puter.com/v2/"></script>
+    <script src="app.js"></script>
+    <script src="chatbot.js"></script>
+</body>
+
+</html>
