@@ -180,7 +180,6 @@
         </div>
         <div class="nav-links">
             <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Features</a>
         </div>
     </nav>
 
@@ -200,6 +199,15 @@
                 <div id="nameGroup" class="auth-input-group" style="display: none;">
                     <label for="fullName">Full Name</label>
                     <input type="text" id="fullName" class="auth-input" placeholder="e.g. John Doe">
+                </div>
+
+                <div class="auth-input-group">
+                    <label for="roleSelect">Login As</label>
+                    <select id="roleSelect" class="auth-input"
+                        style="cursor: pointer; background-color: var(--surface-bg);">
+                        <option value="user" style="color: #000; background: #fff;">User</option>
+                        <option value="admin" style="color: #000; background: #fff;">Administrator</option>
+                    </select>
                 </div>
 
                 <div class="auth-input-group">
@@ -223,7 +231,6 @@
 
     <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
     <script>
         lucide.createIcons();
 
@@ -237,6 +244,29 @@
         const authForm = document.getElementById('authForm');
         const authError = document.getElementById('authError');
         const fullNameInput = document.getElementById('fullName');
+
+        let sbClient = null;
+
+        async function initAuth() {
+            try {
+                const res = await fetch('/api/config');
+                const config = await res.json();
+                if (window.supabase && config.supabase_url && config.supabase_anon_key) {
+                    sbClient = window.supabase.createClient(config.supabase_url, config.supabase_anon_key);
+                }
+            } catch (err) {
+                console.error("Config fetch error:", err);
+            }
+        }
+        initAuth();
+
+        window.addEventListener("scroll", () => {
+            if (window.scrollY > 40) {
+                document.getElementById("navbar").classList.add("scrolled");
+            } else {
+                document.getElementById("navbar").classList.remove("scrolled");
+            }
+        });
 
         toggleMode.addEventListener('click', (e) => {
             e.preventDefault();
@@ -272,37 +302,43 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const fullName = fullNameInput.value.trim();
+            const role = document.getElementById('roleSelect').value;
 
-            if (!window.supabase) {
-                showError("Database connection failed. Check your environment keys.");
+            if (!sbClient) {
+                showError("Database connection not ready. Please wait a moment or check your environment keys.");
                 resetBtn();
                 return;
             }
 
             try {
                 if (isSignUp) {
-                    const { data, error } = await supabase.auth.signUp({
+                    const { data, error } = await sbClient.auth.signUp({
                         email: email,
                         password: password,
                         options: {
-                            data: { full_name: fullName }
+                            data: { full_name: fullName, role: role }
                         }
                     });
                     if (error) throw error;
 
+                    // Force update profile role so admin can fetch all data in the admin dashboard
+                    if (data.user) {
+                        await sbClient.from('profiles').update({ role: role }).eq('id', data.user.id);
+                    }
+
                     if (data.session) {
-                        window.location.href = '/chatbot'; // Redirect on success
+                        window.location.href = role === 'admin' ? '/admin' : '/chatbot';
                     } else if (data.user) {
                         showError("Account created! Please check your email to verify before logging in.");
                     }
                 } else {
-                    const { data, error } = await supabase.auth.signInWithPassword({
+                    const { data, error } = await sbClient.auth.signInWithPassword({
                         email: email,
                         password: password
                     });
                     if (error) throw error;
 
-                    window.location.href = '/chatbot'; // Redirect on success
+                    window.location.href = role === 'admin' ? '/admin' : '/chatbot';
                 }
             } catch (err) {
                 showError(err.message);
