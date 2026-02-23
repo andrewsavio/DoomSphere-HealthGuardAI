@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard AI — Insurance Recommendations</title>
+    <meta name="description"
+        content="AI-powered insurance policy prediction tailored for Indian users based on age, income, and medical conditions.">
+
+    <!-- Supabase JS Client (UMD version) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .insurance-container {
+            max-width: 600px;
+            margin: 120px auto 60px;
+            padding: 30px;
+            background: rgba(13, 17, 28, 0.7);
+            border: 1px solid rgba(88, 101, 242, 0.2);
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+        }
+
+        .insurance-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .insurance-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        /* Range Slider */
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .age-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .age-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-teal);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(45, 212, 191, 0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .age-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider-value {
+            font-weight: 600;
+            color: var(--accent-teal);
+            min-width: 80px;
+        }
+
+        /* Pill Buttons */
+        .pill-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pill-btn {
+            padding: 10px 20px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .pill-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .pill-btn.active {
+            background: var(--primary-light);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Custom Select */
+        .custom-select {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            appearance: none;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 16px;
+        }
+
+        .custom-select option {
+            background: var(--bg-card);
+            color: white;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            margin-top: 10px;
+        }
+
+        /* Results Area */
+        .insurance-results {
+            margin-top: 40px;
+            display: none;
+        }
+
+        .insurance-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .insurance-card:hover {
+            border-color: rgba(88, 101, 242, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .insurance-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--primary-light);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .insurance-desc {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .insurance-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .insurance-actions .btn {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 15, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(88, 101, 242, 0.3);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div class="brand-text">
+                HealthGuard<span class="brand-ai">AI</span>
+            </div>
+        </div>
+        <div class="nav-status" id="navStatus">
+            <div class="status-dot pulse"></div>
+            <span id="authStatusText">System Online</span>
+        </div>
+        <div class="nav-links">
+            <a href="/features" class="nav-link">Features</a>
+            <a href="/analyze" class="nav-link">Analyze</a>
+            <a href="/insurance" class="nav-link active">Insurance</a>
+            <a href="/about" class="nav-link">About</a>
+            <div class="nav-action-buttons">
+                <a href="/chatbot" class="btn btn-outline btn-sm">
+                    <i data-lucide="message-squarePlus" style="width: 14px; height: 14px;"></i> Chatbot
+                </a>
+                <a href="/login" id="navLoginBtn" class="btn btn-primary btn-sm">
+                    <i data-lucide="log-in" style="width: 14px; height: 14px;"></i> Sign In
+                </a>
+                <a href="/admin" id="navAdminBtn" class="btn btn-primary btn-sm"
+                    style="display: none; background: #6b21a8;">
+                    Admin Panel
+                </a>
+                <button id="navLogoutBtn" class="btn btn-ghost btn-sm" style="display: none;"><i data-lucide="log-out"
+                        style="width: 14px; height: 14px;"></i> Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="insurance-container">
+        <div class="insurance-header">
+            <a href="/analyze" style="color: var(--text-secondary);"><i data-lucide="arrow-left"></i></a>
+            <h1>AI Policy Predictor</h1>
+        </div>
+
+        <form id="insuranceForm">
+            <!-- Age Slider -->
+            <div class="form-group">
+                <label class="form-label">How old is the eldest member?</label>
+                <div class="slider-wrapper">
+                    <input type="range" class="age-slider" id="ageSlider" min="18" max="100" value="25">
+                    <span class="slider-value" id="ageValue">25 Years</span>
+                </div>
+            </div>
+
+            <!-- Insure Who -->
+            <div class="form-group">
+                <label class="form-label">Who do you want to insure?</label>
+                <div class="pill-group" id="insureWhoGroup">
+                    <button type="button" class="pill-btn active" data-value="Self">✓ Self</button>
+                    <button type="button" class="pill-btn" data-value="Spouse">Spouse</button>
+                    <button type="button" class="pill-btn" data-value="Children">Children</button>
+                    <button type="button" class="pill-btn" data-value="Parents">Parents</button>
+                </div>
+            </div>
+
+            <!-- City -->
+            <div class="form-group">
+                <label class="form-label">Which city do you live in?</label>
+                <select class="custom-select" id="citySelect">
+                    <option value="Tier 1 (Metro)">Tier 1 (Metro)</option>
+                    <option value="Tier 2 (Urban)">Tier 2 (Urban)</option>
+                    <option value="Tier 3 (Semi Urban)">Tier 3 (Semi Urban)</option>
+                </select>
+            </div>
+
+            <!-- Income -->
+            <div class="form-group">
+                <label class="form-label">Annual Family Income</label>
+                <select class="custom-select" id="incomeSelect">
+                    <option value="< ₹5L">&lt; ₹5L</option>
+                    <option value="₹5L - ₹10L" selected>₹5L - ₹10L</option>
+                    <option value="₹10L - ₹20L">₹10L - ₹20L</option>
+                    <option value="> ₹20L">&gt; ₹20L</option>
+                </select>
+            </div>
+
+            <!-- Medical Conditions -->
+            <div class="form-group">
+                <label class="form-label">Any existing medical conditions?</label>
+                <div class="pill-group" id="medicalGroup">
+                    <button type="button" class="pill-btn" data-value="Diabetes">Diabetes</button>
+                    <button type="button" class="pill-btn" data-value="Hypertension">Hypertension</button>
+                    <button type="button" class="pill-btn" data-value="Heart Condition">Heart Condition</button>
+                    <button type="button" class="pill-btn" data-value="Thyroid">Thyroid</button>
+                    <button type="button" class="pill-btn" data-value="Asthma">Asthma</button>
+                    <button type="button" class="pill-btn active" data-value="None">✓ None</button>
+                    <button type="button" class="pill-btn" data-value="Other">Other</button>
+                </div>
+                <div id="otherMedicalContainer" style="display: none; margin-top: 15px;">
+                    <input type="text" id="otherMedicalInput" placeholder="Specify other conditions (e.g., Arthritis)"
+                        style="width: 100%; padding: 12px 15px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-primary); font-family: inherit; font-size: 15px; outline: none;">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-glow submit-btn">
+                <i data-lucide="search"></i> Find Insurance
+            </button>
+        </form>
+
+        <div class="insurance-results" id="insuranceResults">
+            <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 20px; color: var(--text-primary);">Recommended
+                Policies</h2>
+            <div id="resultsContainer"></div>
+        </div>
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div style="margin-top: 20px; color: var(--text-primary); font-weight: 500;">AI evaluating Indian insurers...
+        </div>
+    </div>
+
+    <!-- External Scripts -->
+
+    <script src="app.js"></script>
+    <script src="insurance.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

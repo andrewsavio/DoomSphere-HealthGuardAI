@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const resultsSection = document.getElementById("resultsSection");
     const downloadPdfBtn = document.getElementById("downloadPdfBtn");
     const newScanBtn = document.getElementById("newScanBtn");
+    const exploreInsurancesBtn = document.getElementById("exploreInsurancesBtn");
+    const scanInsuranceResults = document.getElementById("scanInsuranceResults");
+    const scanInsuranceList = document.getElementById("scanInsuranceList");
     const navStatus = document.getElementById("navStatus");
     const navbar = document.getElementById("navbar");
     const authStatusText = document.getElementById("authStatusText");
@@ -36,6 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const API_BASE = window.location.origin;
     window.AppConfig = {};
     window.currentUser = null;
+    let currentScanData = null; // Store scan data for insurance prompt
 
     async function initializeSystemConfig() {
         try {
@@ -318,6 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
         currentSessionId = null;
         batchReportFilenames = [];
         resetFeedbackForm();
+        if (scanInsuranceResults) scanInsuranceResults.classList.add("hidden");
     }
 
     // ---------- Analyze ----------
@@ -613,6 +618,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
     // ---------- Display Results ----------
     function displayResults(data) {
+        currentScanData = data; // Save for external features
         // Store session ID for feedback
         currentSessionId = data.session_id;
 
@@ -885,6 +891,131 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
         });
     }
 
+    // ---------- Explore Insurances ----------
+    if (exploreInsurancesBtn) {
+        exploreInsurancesBtn.addEventListener("click", async () => {
+            if (!currentScanData) return;
+
+            // Show loading state on button
+            exploreInsurancesBtn.disabled = true;
+            exploreInsurancesBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Fetching Recommendations...';
+            if (window.lucide) lucide.createIcons();
+
+            scanInsuranceResults.classList.remove("hidden");
+            scanInsuranceList.innerHTML = '<div style="text-align:center; padding: 20px;"><i data-lucide="loader-2" class="spin"></i> AI is analyzing scan findings to recommend relevant Indian Insurances...</div>';
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                let findingsSummary = "Normal";
+                let severity = "Low";
+
+                if (currentScanData.analysis) {
+                    severity = currentScanData.analysis.overall_severity || "Low";
+                    if (currentScanData.analysis.findings && currentScanData.analysis.findings.length > 0) {
+                        findingsSummary = currentScanData.analysis.findings.map(f => f.finding).join(", ");
+                    } else if (currentScanData.analysis.primary_finding) {
+                        findingsSummary = currentScanData.analysis.primary_finding;
+                    }
+                }
+
+                const organ = currentScanData.scan_type?.scan_type || "Unknown Body Part";
+
+                const prompt = `You are an expert Indian health insurance advisor. 
+The patient just uploaded a medical scan for: ${organ}.
+The AI analysis found these issues: ${findingsSummary}
+The overall severity is: ${severity}.
+
+Based strictly on this data, recommend the top 3 Indian health insurances that provide the best coverage, treatment benefits, and lowest waiting periods for conditions related to these findings (${organ} / ${findingsSummary}).
+
+IMPORTANT: You must respond ONLY with a valid JSON array. Do not include any other text or markdown block backticks.
+Format each recommendation exactly like this:
+[
+  {
+    "name": "Insurance Name",
+    "provider": "Provider Name",
+    "analysis": "In-depth analysis of why this specific insurance is best suited for the user's scan findings, detailing organ-specific limits and waiting periods.",
+    "websiteLink": "Actual website URL for the insurance provider"
+  }
+]`;
+
+                let groqKey = window.AppConfig?.groq_insurance_key || window.AppConfig?.groq_api_key;
+
+                if (!groqKey) {
+                    throw new Error("No Groq API key configured. Cannot fetch recommendations.");
+                }
+
+                let rawResponse = '';
+                try {
+                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${groqKey}`
+                        },
+                        body: JSON.stringify({
+                            model: 'llama-3.3-70b-versatile',
+                            messages: [{ role: 'user', content: prompt }],
+                            temperature: 0.2
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errObj = await response.json();
+                        throw new Error(errObj.error?.message || "Groq API Request Failed");
+                    }
+
+                    const dataObj = await response.json();
+                    rawResponse = dataObj.choices[0].message.content;
+                } catch (apiErr) {
+                    throw new Error(`Groq Analysis Failed: ${apiErr.message}`);
+                }
+
+                // Parse standard JSON
+                rawResponse = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();
+                const insurances = JSON.parse(rawResponse);
+
+                if (!Array.isArray(insurances)) throw new Error("Invalid AI Response Array");
+
+                scanInsuranceList.innerHTML = '';
+                insurances.forEach(insurance => {
+                    const card = document.createElement('div');
+                    card.className = 'summary-card';
+                    card.style.display = 'flex';
+                    card.style.flexDirection = 'column';
+                    card.style.gap = '10px';
+
+                    const contextPayload = encodeURIComponent(JSON.stringify(insurance));
+
+                    card.innerHTML = `
+                        <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">
+                            ${insurance.name} 
+                            <span style="font-size: 13px; font-weight: normal; color: var(--text-secondary); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; margin-left: 8px;">${insurance.provider}</span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">${insurance.analysis}</div>
+                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                            <a href="${insurance.websiteLink}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1; border-color: rgba(255,255,255,0.1);">
+                                <i data-lucide="external-link" style="width: 14px; height: 14px;"></i> Visit site
+                            </a>
+                            <a href="/chatbot?insurance_context=${contextPayload}" class="btn btn-primary btn-sm" style="flex: 1; background: var(--accent-teal); color: #000; font-weight: 600;">
+                                <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i> Ask AI about this policy
+                            </a>
+                        </div>
+                    `;
+                    scanInsuranceList.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error("Insurance AI Error:", err);
+                scanInsuranceList.innerHTML = `<div style="color: var(--accent-red); padding: 10px; text-align: center;">Failed to generate recommendations: ${err.message}</div>`;
+            } finally {
+                // Restore Button
+                exploreInsurancesBtn.disabled = false;
+                exploreInsurancesBtn.innerHTML = '<i data-lucide="shield"></i> Explore Relevant Insurances';
+                if (window.lucide) lucide.createIcons();
+            }
+        });
+    }
+
     // ---------- Batch Results (Accordion) ----------
     function displayBatchResults(resultsArray) {
         const batchSection = document.getElementById("batchResultsSection");
@@ -922,24 +1053,24 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
             const header = document.createElement("div");
             header.className = "accordion-header";
             header.innerHTML = `
-                <div class="accordion-header-left">
+                        < div class="accordion-header-left" >
                     <span class="accordion-index">${idx + 1}</span>
                     <i data-lucide="file-image" class="accordion-file-icon"></i>
                     <span class="accordion-filename">${result.filename}</span>
                     ${!result.error ? `<span class="accordion-severity" style="color:${severityColor}">${severityLabel}</span>` : `<span class="accordion-error-badge">ERROR</span>`}
-                </div>
-                <div class="accordion-header-right">
-                    ${!result.error ? `<button class="btn btn-ghost btn-sm accordion-download-btn" data-url="${result.report.supabase_report_url || result.report.download_url}" title="Download PDF"><i data-lucide="download"></i></button>` : ""}
-                    <i data-lucide="chevron-down" class="accordion-chevron"></i>
-                </div>
-            `;
+                </div >
+                        <div class="accordion-header-right">
+                            ${!result.error ? `<button class="btn btn-ghost btn-sm accordion-download-btn" data-url="${result.report.supabase_report_url || result.report.download_url}" title="Download PDF"><i data-lucide="download"></i></button>` : ""}
+                            <i data-lucide="chevron-down" class="accordion-chevron"></i>
+                        </div>
+                    `;
 
             // Body
             const body = document.createElement("div");
             body.className = "accordion-body";
 
             if (result.error) {
-                body.innerHTML = `<div class="accordion-error">${result.error}</div>`;
+                body.innerHTML = `< div class="accordion-error" > ${result.error}</div > `;
             } else {
                 body.innerHTML = buildAccordionBodyHTML(result);
             }
@@ -986,7 +1117,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
         if (!data || !data.session_id) return;
 
         try {
-            console.log(`[Auto-Train] 🤖 Sending automatic training data back to DenseNet-121 for session: ${data.session_id}...`);
+            console.log(`[Auto - Train] 🤖 Sending automatic training data back to DenseNet - 121 for session: ${data.session_id}...`);
 
             const payload = {
                 session_id: data.session_id,
@@ -998,7 +1129,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                 scan_type: data.scan_type.scan_type || "Unknown"
             };
 
-            const response = await fetch(`/api/feedback`, {
+            const response = await fetch(`/ api / feedback`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
@@ -1006,7 +1137,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
             if (response.ok) {
                 const result = await response.json();
-                console.log(`[Auto-Train] ✅ Model successfully trained on scan! Loss: ${result.loss}`);
+                console.log(`[Auto - Train] ✅ Model successfully trained on scan! Loss: ${result.loss}`);
             } else {
                 console.warn("[Auto-Train] ⚠️ Background training request failed.", await response.text());
             }
@@ -1020,11 +1151,11 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
         let html = "";
 
         // Primary finding + severity
-        html += `<div class="accordion-result-summary">`;
-        html += `<div class="accordion-result-row"><strong>Primary Finding:</strong> ${analysis.primary_finding}</div>`;
-        html += `<div class="accordion-result-row"><strong>Severity:</strong> <span style="color:${analysis.overall_severity === 'high' ? 'var(--accent-red)' : analysis.overall_severity === 'medium' ? 'var(--accent-yellow)' : 'var(--accent-green)'}">${analysis.overall_severity.toUpperCase()}</span></div>`;
-        html += `<div class="accordion-result-row"><strong>Model:</strong> ${analysis.model_info.name} (${analysis.model_info.device})</div>`;
-        html += `</div>`;
+        html += `< div class= "accordion-result-summary" > `;
+        html += `< div class= "accordion-result-row" > <strong>Primary Finding:</strong> ${analysis.primary_finding}</div > `;
+        html += `< div class= "accordion-result-row" ><strong>Severity:</strong> <span style="color:${analysis.overall_severity === 'high' ? 'var(--accent-red)' : analysis.overall_severity === 'medium' ? 'var(--accent-yellow)' : 'var(--accent-green)'}">${analysis.overall_severity.toUpperCase()}</span></div > `;
+        html += `< div class= "accordion-result-row" > <strong>Model:</strong> ${analysis.model_info.name}(${analysis.model_info.device})</div > `;
+        html += `</div > `;
 
         // Detailed report (if available)
         if (analysis.detailed_report) {
@@ -1032,46 +1163,46 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
             // Clinical interpretation
             if (report.summary) {
-                html += `<div class="accordion-detail-section">`;
-                html += `<div class="accordion-detail-title">Clinical Interpretation</div>`;
-                html += `<div class="accordion-detail-text">${report.summary}</div>`;
-                html += `</div>`;
+                html += `< div class= "accordion-detail-section" > `;
+                html += `< div class= "accordion-detail-title" > Clinical Interpretation</div > `;
+                html += `< div class= "accordion-detail-text" > ${report.summary}</div > `;
+                html += `</div > `;
             }
 
             // Metrics table
             if (report.metrics && report.metrics.length > 0) {
-                html += `<div class="accordion-detail-section">`;
-                html += `<div class="accordion-detail-title">Quantitative Metrics</div>`;
-                html += `<table class="report-table"><thead><tr><th>Parameter</th><th>Result</th><th>Normal</th><th>Status</th></tr></thead><tbody>`;
+                html += `< div class= "accordion-detail-section" > `;
+                html += `< div class= "accordion-detail-title" > Quantitative Metrics</div > `;
+                html += `< table class= "report-table" ><thead><tr><th>Parameter</th><th>Result</th><th>Normal</th><th>Status</th></tr></thead><tbody>`;
                 report.metrics.forEach(m => {
                     const sc = m.status === 'Normal' ? 'status-normal' : m.status === 'Abnormal' ? 'status-abnormal' : 'status-review';
                     html += `<tr><td>${m.parameter}</td><td>${m.result}</td><td>${m.normal}</td><td class="${sc}">${m.status}</td></tr>`;
                 });
-                html += `</tbody></table></div>`;
+                html += `</tbody></table ></div > `;
             }
 
             // Recommendations
             if (report.recommendations && report.recommendations.length > 0) {
-                html += `<div class="accordion-detail-section">`;
-                html += `<div class="accordion-detail-title">Recommendations</div>`;
-                html += `<ul class="report-list">`;
-                report.recommendations.forEach(r => { html += `<li>${r}</li>`; });
-                html += `</ul></div>`;
+                html += `< div class= "accordion-detail-section" > `;
+                html += `< div class= "accordion-detail-title" > Recommendations</div > `;
+                html += `< ul class= "report-list" > `;
+                report.recommendations.forEach(r => { html += `< li > ${r}</li > `; });
+                html += `</ul ></div > `;
             }
         }
 
         // Findings list
         if (analysis.findings && analysis.findings.length > 0) {
-            html += `<div class="accordion-detail-section">`;
-            html += `<div class="accordion-detail-title">All Findings</div>`;
+            html += `< div class= "accordion-detail-section" > `;
+            html += `< div class= "accordion-detail-title" > All Findings</div > `;
             analysis.findings.forEach(f => {
-                html += `<div class="accordion-finding">`;
-                html += `<span class="finding-severity-badge ${f.severity}">${f.severity}</span>`;
-                html += `<span class="accordion-finding-name">${f.finding}</span>`;
-                html += `<span class="accordion-finding-conf">${f.confidence}%</span>`;
-                html += `</div>`;
+                html += `< div class= "accordion-finding" > `;
+                html += `< span class= "finding-severity-badge ${f.severity}" > ${f.severity}</span > `;
+                html += `< span class= "accordion-finding-name" > ${f.finding}</span > `;
+                html += `< span class= "accordion-finding-conf" > ${f.confidence} %</span > `;
+                html += `</div > `;
             });
-            html += `</div>`;
+            html += `</div > `;
         }
 
         return html;
@@ -1089,7 +1220,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
             downloadAllBtn.querySelector("i")?.classList.add("spin");
 
             try {
-                const response = await fetch(`${API_BASE}/api/reports/download-all`, {
+                const response = await fetch(`${API_BASE} / api / reports / download - all`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ filenames: batchReportFilenames }),
@@ -1268,7 +1399,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                 custom_finding_is_new: isCustom,
             };
             try {
-                const response = await fetch(`${API_BASE}/api/feedback`, {
+                const response = await fetch(`${API_BASE} / api / feedback`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
@@ -1290,10 +1421,10 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
                 // Display mini stats
                 feedbackStatsMini.innerHTML = `
-                    <div class="feedback-stat-item">
+                < div class= "feedback-stat-item" >
                         <span class="feedback-stat-value">${result.feedback_id}</span>
                         <span class="feedback-stat-label">Feedback ID</span>
-                    </div>
+                    </div >
                     <div class="feedback-stat-item">
                         <span class="feedback-stat-value">${result.total_feedbacks}</span>
                         <span class="feedback-stat-label">Total Feedbacks</span>
@@ -1307,20 +1438,23 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                         <span class="feedback-stat-value">${result.training_steps}</span>
                         <span class="feedback-stat-label">Training Steps</span>
                     </div>
-                    ` : ""}
+                    ` : ""
+                    }
                     ${result.loss !== undefined ? `
                     <div class="feedback-stat-item">
                         <span class="feedback-stat-value">${result.loss}</span>
                         <span class="feedback-stat-label">Avg Loss</span>
                     </div>
-                    ` : ""}
+                    ` : ""
+                    }
                     ${result.total_findings ? `
                     <div class="feedback-stat-item">
                         <span class="feedback-stat-value">${result.total_findings}</span>
                         <span class="feedback-stat-label">Total Findings</span>
                     </div>
-                    ` : ""}
-                `;
+                    ` : ""
+                    }
+                    `;
 
                 // Re-init icons
                 lucide.createIcons();
@@ -1360,13 +1494,13 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                 }
                 if (currentStep < steps.length) {
                     document.getElementById(steps[currentStep]).classList.add("active");
-                    progressBar.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
+                    progressBar.style.width = `${((currentStep + 1) / steps.length) * 100}% `;
                     currentStep++;
                 }
             }, 1200);
 
             try {
-                const response = await fetch(`${API_BASE}/api/reanalyze`, {
+                const response = await fetch(`${API_BASE} /api/reanalyze`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -1599,7 +1733,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
         });
 
         trainingFilename.textContent = `📁 ${folderName} (${imageFiles.length} images)`;
-        trainingFilesize.textContent = `${formatFileSize(totalSize)}${subfolders.size > 0 ? ` • ${subfolders.size} subfolders` : ""}`;
+        trainingFilesize.textContent = `${formatFileSize(totalSize)}${subfolders.size > 0 ? ` • ${subfolders.size} subfolders` : ""} `;
         trainUploadContent.classList.add("hidden");
         trainingFilePreview.classList.remove("hidden");
         startTrainingBtn.disabled = false;
@@ -1672,12 +1806,12 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                 xhr.upload.addEventListener("progress", (e) => {
                     if (e.lengthComputable) {
                         const uploadPct = Math.round((e.loaded / e.total) * 50);
-                        trainingProgressFill.style.width = `${uploadPct}%`;
-                        trainingProgressPct.textContent = `${uploadPct}%`;
+                        trainingProgressFill.style.width = `${uploadPct} % `;
+                        trainingProgressPct.textContent = `${uploadPct} % `;
 
                         const loadedMB = (e.loaded / 1048576).toFixed(1);
                         const totalMB = (e.total / 1048576).toFixed(1);
-                        trainingStatusMessage.textContent = `Uploading: ${loadedMB} MB / ${totalMB} MB (${fileCount} files)`;
+                        trainingStatusMessage.textContent = `Uploading: ${loadedMB} MB / ${totalMB} MB(${fileCount} files)`;
                     }
                 });
 
@@ -1708,7 +1842,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                     reject(new Error("Upload timed out"));
                 });
 
-                xhr.open("POST", `${API_BASE}/api/train`);
+                xhr.open("POST", `${API_BASE} / api / train`);
                 xhr.timeout = 0; // No timeout for large uploads
                 xhr.send(formData);
             });
@@ -1716,13 +1850,13 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
             // Poll training progress while waiting for server response
             let trainingPollInterval = setInterval(async () => {
                 try {
-                    const statusRes = await fetch(`${API_BASE}/api/train/status`);
+                    const statusRes = await fetch(`${API_BASE} / api / train / status`);
                     const status = await statusRes.json();
                     if (status.is_training && status.progress > 0) {
                         // Map server progress (0-100) to bar progress (50-100)
                         const serverPct = 50 + Math.round(status.progress * 0.5);
-                        trainingProgressFill.style.width = `${serverPct}%`;
-                        trainingProgressPct.textContent = `${serverPct}%`;
+                        trainingProgressFill.style.width = `${serverPct} % `;
+                        trainingProgressPct.textContent = `${serverPct} % `;
                         trainingStatusMessage.textContent = status.message || "Training...";
                     }
                 } catch (e) {
@@ -1749,10 +1883,10 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
                 // Build stats
                 trainingResultStats.innerHTML = `
-                    <div class="feedback-stat-item">
+< div class= "feedback-stat-item" >
                         <span class="feedback-stat-value">${result.images_processed || 0}</span>
                         <span class="feedback-stat-label">Images Processed</span>
-                    </div>
+                    </div >
                     <div class="feedback-stat-item">
                         <span class="feedback-stat-value">${result.epochs || 0}</span>
                         <span class="feedback-stat-label">Epochs</span>
@@ -1774,8 +1908,9 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                         <span class="feedback-stat-value">${result.epoch_losses[result.epoch_losses.length - 1]}</span>
                         <span class="feedback-stat-label">Final Loss</span>
                     </div>
-                    ` : ""}
-                `;
+                    ` : ""
+                    }
+    `;
 
                 lucide.createIcons();
                 trainingResultPanel.scrollIntoView({ behavior: "smooth", block: "center" });
