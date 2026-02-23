@@ -21,6 +21,23 @@
     <!-- Compressor.js for client-side image compression -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Synchronous auth check to prevent UI flash
+        (function () {
+            let hasSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith('sb-') && localStorage.key(i).endsWith('-auth-token')) {
+                    hasSession = true;
+                    break;
+                }
+            }
+            if (!hasSession) {
+                window.location.replace('/login');
+            }
+        })();
+    </script>
+
     <link rel="stylesheet" href="styles.css">
 </head>
 
