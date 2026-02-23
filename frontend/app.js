@@ -2205,5 +2205,99 @@ Format each recommendation exactly like this:
         el.style.opacity = "0";
         observer.observe(el);
     });
+
+    // ========== DRUG INTERACTION CHECKER (Scan Results Page) ==========
+    const scanCheckBtn = document.getElementById('scanCheckInteractionBtn');
+    const scanMedInput = document.getElementById('scanMedInput');
+    const scanInteractionResult = document.getElementById('scanInteractionResult');
+
+    if (scanCheckBtn && scanMedInput) {
+        scanCheckBtn.addEventListener('click', () => {
+            const raw = scanMedInput.value.trim();
+            if (!raw) return;
+            const meds = raw.split(',').map(m => m.trim()).filter(m => m.length > 0);
+            if (meds.length < 2) {
+                scanInteractionResult.innerHTML = '<p style="color:#f87171;font-size:0.85rem;padding:8px;">Please enter at least 2 medicines separated by commas.</p>';
+                return;
+            }
+
+            scanInteractionResult.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:14px;background:rgba(245,158,11,0.08);border-radius:10px;"><div style="width:20px;height:20px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:scanSpin 0.8s linear infinite;"></div><span style="color:var(--text-secondary);font-size:0.85rem;">Analyzing drug interactions via AI...</span></div><style>@keyframes scanSpin{to{transform:rotate(360deg)}}</style>`;
+
+            fetch('/api/check-interactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ medicines: meds })
+            })
+                .then(r => r.json())
+                .then(result => {
+                    scanInteractionResult.innerHTML = '';
+                    if (result.error) {
+                        scanInteractionResult.innerHTML = `<p style="color:#f87171;padding:8px;">${result.error}</p>`;
+                        return;
+                    }
+                    renderScanInteractions(scanInteractionResult, result, meds);
+                })
+                .catch(err => {
+                    scanInteractionResult.innerHTML = `<p style="color:#f87171;padding:8px;">Error: ${err.message}</p>`;
+                });
+        });
+    }
+
+    function renderScanInteractions(container, result, medicines) {
+        const sevColors = {
+            severe: { bg: 'rgba(239,68,68,0.12)', border: '#ef4444', text: '#fca5a5', icon: '🔴', label: 'SEVERE' },
+            moderate: { bg: 'rgba(245,158,11,0.12)', border: '#f59e0b', text: '#fcd34d', icon: '🟡', label: 'MODERATE' },
+            mild: { bg: 'rgba(16,185,129,0.08)', border: '#10b981', text: '#6ee7b7', icon: '🟢', label: 'MILD' },
+            none: { bg: 'rgba(59,130,246,0.08)', border: '#3b82f6', text: '#93c5fd', icon: '✅', label: 'SAFE' },
+        };
+
+        const riskColor = (result.risk_summary || '').includes('HIGH') ? '#ef4444' :
+            (result.risk_summary || '').includes('MODERATE') ? '#f59e0b' : '#10b981';
+
+        let html = `<div style="padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid ${riskColor};border-radius:10px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+            <span style="font-size:1.4rem;">${riskColor === '#ef4444' ? '🚨' : riskColor === '#f59e0b' ? '⚠️' : '✅'}</span>
+            <div><span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:${riskColor};font-weight:700;">Risk Summary</span>
+            <p style="color:var(--text-primary);margin:2px 0 0;font-size:0.95rem;font-weight:600;">${result.risk_summary || 'Analysis complete'}</p></div></div>`;
+
+        // Medicine tags
+        html += `<div style="margin-bottom:14px;"><span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);">Medicines Checked (${medicines.length})</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">${medicines.map(m => `<span style="padding:3px 10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:12px;font-size:0.75rem;color:#93c5fd;">${m}</span>`).join('')}</div></div>`;
+
+        // Interactions
+        const interactions = result.interactions || [];
+        if (interactions.length > 0) {
+            html += `<span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);display:block;margin-bottom:8px;">Interactions Found (${interactions.length})</span>`;
+            html += `<div style="display:flex;flex-direction:column;gap:10px;">`;
+            interactions.forEach(inter => {
+                const s = sevColors[inter.severity] || sevColors.mild;
+                const systems = (inter.affected_systems || []).map(sys => `<span style="padding:1px 6px;background:rgba(255,255,255,0.06);border-radius:4px;font-size:0.7rem;color:var(--text-secondary);">${sys}</span>`).join(' ');
+                html += `<div style="padding:14px;background:${s.bg};border:1px solid ${s.border}33;border-radius:10px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                        <span style="font-size:1rem;">${s.icon}</span>
+                        <span style="font-weight:700;color:${s.text};font-size:0.75rem;text-transform:uppercase;letter-spacing:0.5px;">${s.label}</span>
+                        <span style="color:var(--text-primary);font-weight:600;font-size:0.9rem;">${inter.medicine_1} + ${inter.medicine_2}</span>
+                    </div>
+                    <p style="color:var(--text-primary);font-size:0.85rem;margin:4px 0;line-height:1.5;"><strong style="color:${s.text};">Effect:</strong> ${inter.effect}</p>
+                    <p style="color:var(--text-secondary);font-size:0.82rem;margin:4px 0;line-height:1.4;"><strong>Recommendation:</strong> ${inter.recommendation}</p>
+                    ${systems ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${systems}</div>` : ''}
+                </div>`;
+            });
+            html += `</div>`;
+        }
+
+        // Safe combinations
+        const safes = result.safe_combinations || [];
+        if (safes.length > 0) {
+            html += `<div style="margin-top:14px;"><span style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);">Safe Combinations</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">${safes.map(s => `<span style="padding:3px 10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:12px;font-size:0.75rem;color:#6ee7b7;">✅ ${s}</span>`).join('')}</div></div>`;
+        }
+
+        // General advice
+        if (result.general_advice) {
+            html += `<div style="margin-top:14px;padding:12px;background:rgba(59,130,246,0.08);border-radius:8px;border:1px solid rgba(59,130,246,0.15);"><span style="font-size:0.7rem;text-transform:uppercase;color:var(--accent-blue);">General Advice</span><p style="color:var(--text-primary);font-size:0.85rem;margin:4px 0 0;line-height:1.5;">${result.general_advice}</p></div>`;
+        }
+
+        container.innerHTML = html;
+    }
 });
 
