@@ -129,8 +129,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 navAuthLink.href = "/login";
                 navAuthLink.onclick = null;
             }
+        }
 
-            // Route protection handled in HTML head
+        // Role-based navigation filtering
+        const role = session ? (session.user?.user_metadata?.role || 'admin') : null;
+        const navLinks = document.querySelectorAll('.nav-link:not(.auth-link)');
+        const currentPath = window.location.pathname;
+
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            let shouldShow = true;
+
+            if (role === 'patient') {
+                // Patient can only use Advocate and Insurance (and Home/About)
+                if (href === '/analyze' || href === '/features' || href === '/chatbot') {
+                    shouldShow = false;
+                }
+            } else if (role === 'doctor') {
+                // Doctor uses everything except Advocate and Insurance
+                if (href === '/advocate' || href === '/insurance') {
+                    shouldShow = false;
+                }
+            } else if (!role) {
+                // Not logged in: allow basic pages, or rely on html script to restrict access
+                // Hide specific application features visually until logged in!
+                if (href === '/analyze' || href === '/advocate' || href === '/insurance' || href === '/chatbot') {
+                    shouldShow = false;
+                }
+            }
+
+            if (shouldShow) {
+                link.style.display = 'inline-flex';
+            } else {
+                link.style.display = 'none';
+            }
+        });
+
+        // Enforce page-level access control based on role
+        if (role === 'patient') {
+            if (currentPath === '/analyze' || currentPath === '/features' || currentPath === '/chatbot') {
+                window.location.href = '/advocate';
+            }
+        } else if (role === 'doctor') {
+            if (currentPath === '/advocate' || currentPath === '/insurance') {
+                window.location.href = '/analyze';
+            }
         }
     }
 
