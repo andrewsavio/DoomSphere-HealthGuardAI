@@ -140,6 +140,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const href = link.getAttribute('href');
             let shouldShow = true;
 
+            // Dynamically update the about link based on role
+            if (href.startsWith('/about')) {
+                if (role === 'patient') {
+                    link.setAttribute('href', '/about-patient');
+                } else if (role === 'doctor') {
+                    link.setAttribute('href', '/about-doctor');
+                }
+            }
+
             if (role === 'patient') {
                 // Patient can only use Advocate and Insurance (and Home/About)
                 if (href === '/analyze' || href === '/features' || href === '/chatbot') {
@@ -169,10 +178,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (role === 'patient') {
             if (currentPath === '/analyze' || currentPath === '/features' || currentPath === '/chatbot') {
                 window.location.href = '/advocate';
+            } else if (currentPath === '/about' || currentPath === '/about-doctor') {
+                window.location.href = '/about-patient';
             }
         } else if (role === 'doctor') {
             if (currentPath === '/advocate' || currentPath === '/insurance') {
                 window.location.href = '/analyze';
+            } else if (currentPath === '/about' || currentPath === '/about-patient') {
+                window.location.href = '/about-doctor';
             }
         }
     }
