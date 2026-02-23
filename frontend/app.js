@@ -464,6 +464,75 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
         }
     }
 
+    // Google Translate Free API for Web Results
+    async function translateText(text, targetLang) {
+        if (!text || targetLang === "en") return text;
+        try {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            let translated = "";
+            if (data && data[0]) {
+                for (let i = 0; i < data[0].length; i++) {
+                    if (data[0][i][0]) translated += data[0][i][0];
+                }
+            }
+            return translated || text;
+        } catch (e) {
+            console.error("Translation error:", e);
+            return text;
+        }
+    }
+
+    async function translateAnalysisData(data, targetLang) {
+        if (targetLang === "en") return data;
+        try {
+            const trans = async (t) => await translateText(t, targetLang);
+            if (data.analysis) {
+                if (data.analysis.primary_finding) data.analysis.primary_finding = await trans(data.analysis.primary_finding);
+                if (data.analysis.detailed_report) {
+                    const dr = data.analysis.detailed_report;
+                    if (dr.summary) dr.summary = await trans(dr.summary);
+                    if (dr.recommendations) {
+                        for (let i = 0; i < dr.recommendations.length; i++) {
+                            dr.recommendations[i] = await trans(dr.recommendations[i]);
+                        }
+                    }
+                    if (dr.structures) {
+                        for (let key in dr.structures) {
+                            dr.structures[key] = await trans(dr.structures[key]);
+                        }
+                    }
+                    if (dr.metrics) {
+                        for (let m of dr.metrics) {
+                            if (m.parameter) m.parameter = await trans(m.parameter);
+                            if (m.result) m.result = await trans(m.result);
+                            if (m.normal) m.normal = await trans(m.normal);
+                            // skip m.status to keep CSS classes
+                        }
+                    }
+                    if (dr.risks) {
+                        for (let r of dr.risks) {
+                            if (r.pathology) r.pathology = await trans(r.pathology);
+                            if (r.probability) r.probability = await trans(r.probability);
+                            if (r.risk_category) r.risk_category = await trans(r.risk_category);
+                        }
+                    }
+                }
+                if (data.analysis.findings) {
+                    for (let f of data.analysis.findings) {
+                        if (f.finding) f.finding = await trans(f.finding);
+                        if (f.description) f.description = await trans(f.description);
+                    }
+                }
+            }
+            if (data.scan_type && data.scan_type.scan_type) {
+                data.scan_type.scan_type = await trans(data.scan_type.scan_type);
+            }
+        } catch (e) { console.error(e); }
+        return data;
+    }
+
     async function startAnalysis() {
         // Show loading
         loadingOverlay.classList.remove("hidden");
@@ -566,7 +635,23 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
                 throw new Error(err.error || "Analysis failed");
             }
 
-            const data = await response.json();
+            let data = await response.json();
+
+            // Language Translation
+            const languageSelect = document.getElementById("languageSelect");
+            const targetLang = languageSelect ? languageSelect.value : "en";
+            if (targetLang !== "en") {
+                const loadH2 = document.querySelector(".loading-content h2");
+                if (loadH2) loadH2.textContent = `Translating Web Report to ${targetLang.toUpperCase()}...`;
+                if (isBatch) {
+                    for (let i = 0; i < data.results.length; i++) {
+                        data.results[i] = await translateAnalysisData(data.results[i], targetLang);
+                    }
+                } else {
+                    data = await translateAnalysisData(data, targetLang);
+                }
+                if (loadH2) loadH2.textContent = "Analyzing Your Scan";
+            }
 
             // Complete all steps
             steps.forEach((s) => {
