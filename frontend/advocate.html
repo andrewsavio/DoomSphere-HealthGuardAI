@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Advocate — HealthGuard AI</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand" style="cursor: pointer;" onclick="window.location.href='/'">
+            <div class="brand-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">HealthGuard</span>
+                <span class="brand-badge">AI</span>
+            </div>
+        </div>
+        <div class="nav-status" id="navStatus">
+            <div class="status-dot pulse"></div>
+            <span id="authStatusText">System Online</span>
+        </div>
+        <div class="nav-links">
+            <a href="/features" class="nav-link">Features</a>
+            <a href="/analyze" class="nav-link">Analyze</a>
+            <a href="/advocate" class="nav-link active">Advocate</a>
+            <a href="/insurance" class="nav-link">Insurance</a>
+            <a href="/about" class="nav-link">About</a>
+            <a href="/chatbot" class="nav-link">Chat Bot</a>
+            <!-- Auth Link Will be Injected by JS -->
+            <a href="/login" class="nav-link auth-link" id="navAuthLink" style="display: none;">Login</a>
+        </div>
+    </nav>
+
+    <!-- Main Advocate Interface -->
+    <main class="main-content" style="padding-top: 100px; padding-bottom: 60px; min-height: 100vh;">
+        <div class="container">
+            <div class="section-header text-center" style="margin-bottom: 40px;">
+                <h2 class="section-title">Patient <span class="gradient-text">Advocate</span></h2>
+                <p class="section-desc" style="max-width: 700px; margin: 0 auto;">
+                    Upload your medical prescriptions. Our AI will digitize handwriting, analyze the required medicines,
+                    and find identical formulas at lower prices to save you money.
+                </p>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="glass-panel" style="max-width: 800px; margin: 0 auto;">
+                <div class="panel-header">
+                    <div class="panel-icon">
+                        <i data-lucide="file-text" style="color: var(--accent-blue);"></i>
+                    </div>
+                    <div>
+                        <h3>Upload Prescription</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem;">Upload a clear image of your
+                            handwritten or printed prescription to extract medicines.</p>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <form id="advocateForm" class="upload-form">
+                        <div class="upload-zone" id="advocateDropZone">
+                            <input type="file" id="advocateFileInput" accept="image/*" hidden>
+                            <div class="upload-content">
+                                <div class="upload-icon-wrapper">
+                                    <i data-lucide="upload-cloud" class="upload-icon"></i>
+                                </div>
+                                <h4>Drag & Drop your prescription</h4>
+                                <p>or click to browse local files</p>
+                                <span class="upload-hint">Supports JPG, PNG, WEBP Only</span>
+                            </div>
+                        </div>
+
+                        <!-- Image Preview -->
+                        <div id="advocatePreviewContainer" class="image-preview-container"
+                            style="display: none; margin-top: 20px;">
+                            <div class="preview-header">
+                                <h5>Selected Document</h5>
+                                <button type="button" class="btn-icon" id="advocateClearBtn" title="Clear selection">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>
+                            <img id="advocateImagePreview" src="" alt="Prescription Preview">
+                        </div>
+
+                        <!-- Analyze Button -->
+                        <div class="upload-actions" style="margin-top: 30px; display: flex; justify-content: flex-end;">
+                            <button type="submit" class="btn btn-primary btn-lg" id="advocateAnalyzeBtn" disabled
+                                style="width: 100%; border: 1px solid rgba(255,255,255,0.1);">
+                                <i data-lucide="search"></i> OCR & Analyze Medicines
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Loading State -->
+                    <div id="advocateLoadingState" class="loading-state"
+                        style="display: none; margin-top: 30px; text-align: center;">
+                        <i data-lucide="loader-2" class="spin"
+                            style="width: 30px; height: 30px; color: var(--accent-blue);"></i>
+                        <h4 style="margin-top: 15px; color: var(--text-primary); font-size: 1.1rem;">Processing Document
+                            & Finding Alternatives...</h4>
+                        <p id="advocateLoadingText"
+                            style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 8px;">Uploading securely
+                            before OCR phase...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pre-Analysis Block (showing OCR text) -->
+            <div id="ocrResultContainer"
+                style="display: none; max-width: 800px; margin: 30px auto 0 auto; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+                <h4
+                    style="font-size: 1rem; color: var(--accent-green); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="file-check-2"></i> Digitized Prescription Data
+                </h4>
+                <pre id="ocrTextOutput"
+                    style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--text-secondary); white-space: pre-wrap; overflow-x: auto; max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px;"></pre>
+            </div>
+
+            <!-- Results Section for Groq Analytics -->
+            <div id="advocateResultsContainer" style="display: none; margin-top: 40px;">
+                <h3 style="margin-bottom: 24px; font-weight: 600; font-size: 1.5rem; text-align: center;">
+                    Recommended <span style="color: var(--accent-green);">Cheaper Alternatives</span>
+                </h3>
+
+                <!-- This will be populated dynamically -->
+                <div id="advocateCardsGrid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px;">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+    <!-- Main Advocate Logic -->
+    <script type="module" src="advocate.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

@@ -327,8 +327,9 @@ def generate_report(
     # --- Images (Common) ---
     heatmap_file = analysis_result.get("heatmap_path")
     annotated_file = analysis_result.get("annotated_path")
+    medical_viz_file = analysis_result.get("medical_viz_path")
 
-    if heatmap_file or annotated_file:
+    if heatmap_file or annotated_file or medical_viz_file:
         pdf.add_page()
         pdf.add_section_title("Visual Analysis")
 
@@ -366,6 +367,28 @@ def generate_report(
                     pdf.image(annotated_full, x=30, w=150)
                 except Exception:
                     pdf.cell(0, 8, "[Annotated image could not be loaded]", ln=True)
+                pdf.ln(6)
+
+        # Medical Visualization
+        if medical_viz_file:
+            viz_full = os.path.join(images_dir, medical_viz_file)
+            if os.path.exists(viz_full):
+                # To prevent it from overflowing the page
+                if pdf.get_y() > 200:
+                    pdf.add_page()
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.set_text_color(*BLACK)
+                pdf.cell(0, 8, "3D Medical Visualization", ln=True)
+                pdf.set_font("Helvetica", "", 8)
+                pdf.set_text_color(*BLACK)
+                pdf.cell(0, 5,
+                        "AI-generated 3D representation based on findings and relevant anatomy.",
+                        ln=True)
+                pdf.ln(2)
+                try:
+                    pdf.image(viz_full, x=30, w=150)
+                except Exception:
+                    pdf.cell(0, 8, "[Visualization image could not be loaded]", ln=True)
                 pdf.ln(6)
 
     # --- Disclaimer ---
