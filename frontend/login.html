@@ -86,7 +86,8 @@
         }
 
         .auth-input {
-            background: var(--surface-bg);
+            background: rgba(255, 255, 255, 0.05);
+            /* Match UI dark theme */
             border: 1px solid var(--border-color);
             padding: 14px 16px;
             border-radius: 12px;
@@ -95,6 +96,16 @@
             font-size: 1rem;
             transition: all 0.2s;
             outline: none;
+        }
+
+        /* Fix browser autofill styling making inputs white */
+        .auth-input:-webkit-autofill,
+        .auth-input:-webkit-autofill:hover,
+        .auth-input:-webkit-autofill:focus,
+        .auth-input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #1a2340 inset !important;
+            -webkit-text-fill-color: var(--text-primary) !important;
+            transition: background-color 5000s ease-in-out 0s;
         }
 
         .auth-input:focus {
@@ -179,12 +190,7 @@
             </div>
         </div>
         <div class="nav-links">
-            <a href="/" class="nav-link">Home</a>
-            <a href="/features" class="nav-link">Features</a>
-            <a href="/analyze" class="nav-link">Analyze</a>
-            <a href="/advocate" class="nav-link">Advocate</a>
-            <a href="/insurance" class="nav-link">Insurance</a>
-            <a href="/about" class="nav-link">About</a>
+            <!-- Menus are hidden on the login page -->
         </div>
     </nav>
 
@@ -210,9 +216,10 @@
                 <div class="auth-input-group">
                     <label for="roleSelect">Login As</label>
                     <select id="roleSelect" class="auth-input"
-                        style="cursor: pointer; background-color: var(--surface-bg);">
-                        <option value="user" style="color: #000; background: #fff;">User</option>
-                        <option value="admin" style="color: #000; background: #fff;">Administrator</option>
+                        style="cursor: pointer; background-color: #1a2340; color: white;">
+                        <option value="patient" style="background-color: #1a2340; color: white;">Patient</option>
+                        <option value="doctor" style="background-color: #1a2340; color: white;">Doctor</option>
+                        <option value="admin" style="background-color: #1a2340; color: white;">Administrator</option>
                     </select>
                 </div>
 
@@ -333,7 +340,9 @@
                     }
 
                     if (data.session) {
-                        window.location.href = role === 'admin' ? '/admin' : '/chatbot';
+                        if (role === 'admin') window.location.href = '/admin';
+                        else if (role === 'patient') window.location.href = '/advocate';
+                        else window.location.href = '/analyze';
                     } else if (data.user) {
                         showError("Account created! Please check your email to verify before logging in.");
                     }
@@ -344,7 +353,11 @@
                     });
                     if (error) throw error;
 
-                    window.location.href = role === 'admin' ? '/admin' : '/chatbot';
+                    const userRole = data.user?.user_metadata?.role || document.getElementById('roleSelect').value;
+
+                    if (userRole === 'admin') window.location.href = '/admin';
+                    else if (userRole === 'patient') window.location.href = '/advocate';
+                    else window.location.href = '/analyze';
                 }
             } catch (err) {
                 showError(err.message);
