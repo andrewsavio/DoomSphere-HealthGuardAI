@@ -130,10 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 navAuthLink.onclick = null;
             }
 
-            // Route protection
-            if (window.location.pathname === '/chatbot') {
-                window.location.href = '/login';
-            }
+            // Route protection handled in HTML head
         }
     }
 

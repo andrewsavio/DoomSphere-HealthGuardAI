@@ -232,6 +232,22 @@
             }
         }
     </style>
+
+    <script>
+        // Synchronous auth check to prevent UI flash
+        (function () {
+            let hasSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith('sb-') && localStorage.key(i).endsWith('-auth-token')) {
+                    hasSession = true;
+                    break;
+                }
+            }
+            if (!hasSession) {
+                window.location.replace('/login');
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -262,19 +278,20 @@
             <a href="/analyze" class="nav-link">Analyze</a>
             <a href="/insurance" class="nav-link active">Insurance</a>
             <a href="/about" class="nav-link">About</a>
-            <div class="nav-action-buttons">
-                <a href="/chatbot" class="btn btn-outline btn-sm">
-                    <i data-lucide="message-squarePlus" style="width: 14px; height: 14px;"></i> Chatbot
-                </a>
-                <a href="/login" id="navLoginBtn" class="btn btn-primary btn-sm">
-                    <i data-lucide="log-in" style="width: 14px; height: 14px;"></i> Sign In
-                </a>
-                <a href="/admin" id="navAdminBtn" class="btn btn-primary btn-sm"
-                    style="display: none; background: #6b21a8;">
-                    Admin Panel
-                </a>
-                <button id="navLogoutBtn" class="btn btn-ghost btn-sm" style="display: none;"><i data-lucide="log-out"
-                        style="width: 14px; height: 14px;"></i> Logout</button>
+            <a href="/chatbot" class="nav-link">Chat Bot</a>
+            <!-- Auth Link Will be Injected by JS -->
+            <a href="/login" class="nav-link auth-link" id="navAuthLink" style="display: none;">Login</a>
+
+            <div id="userProfileMenu" class="user-profile-menu"
+                style="display: none; align-items: center; gap: 8px; margin-left: 10px;">
+                <div
+                    style="display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <i data-lucide="user" style="width: 14px; height: 14px; margin-right: 2px;"></i>
+                    <span id="profileName" style="font-size: 0.85rem; font-weight: 500;">User</span>
+                </div>
+                <button id="logoutBtn" class="btn btn-sm"
+                    style="background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: none; padding: 6px 12px; margin-left: 4px;"><i
+                        data-lucide="log-out" style="width: 14px; height: 14px;"></i> Logout</button>
             </div>
         </div>
     </nav>
