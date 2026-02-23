@@ -784,6 +784,156 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
         // Images section removed per user request
 
+        // Render Heatmap (New Feature)
+        const existingHeatmap = document.getElementById("heatmapDisplayContainer");
+        if (existingHeatmap) existingHeatmap.remove();
+
+        if (data.images && data.images.heatmap) {
+            const heatmapContainer = document.createElement("div");
+            heatmapContainer.id = "heatmapDisplayContainer";
+            heatmapContainer.className = "summary-card";
+            heatmapContainer.style.cssText = `
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin-top: 16px;
+                padding: 16px;
+                background: rgba(255, 255, 255, 0.03);
+            `;
+
+            heatmapContainer.innerHTML = `
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="camera" style="width: 16px; height: 16px;"></i> Hi-Res CAM Analysis
+                </div>
+                <img src="${data.images.heatmap}" alt="Scan Heatmap" style="max-width: 100%; max-height: 400px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            `;
+
+            // Insert after the flex container holding severity and score
+            if (severityCard && severityCard.parentNode && severityCard.parentNode.parentNode) {
+                severityCard.parentNode.after(heatmapContainer);
+            }
+
+            // --- Add Puter.js Image Generation Button UI ---
+            const existingVizContainer = document.getElementById("medicalVizContainer");
+            if (existingVizContainer) existingVizContainer.remove();
+
+            const vizContainer = document.createElement("div");
+            vizContainer.id = "medicalVizContainer";
+            vizContainer.style.cssText = `
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin-top: 20px;
+                padding: 20px;
+                background: rgba(255, 255, 255, 0.02);
+                border: 1px solid rgba(255,255,255,0.05);
+                border-radius: 12px;
+            `;
+
+            const generateBtn = document.createElement("button");
+            generateBtn.className = "btn btn-primary";
+            generateBtn.style.cssText = `
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                border: none;
+                padding: 12px 24px;
+                color: white;
+                font-weight: 600;
+                box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            `;
+            generateBtn.innerHTML = `<i data-lucide="image" style="width:18px;height:18px;"></i> Generate 3D Organ Visualization`;
+
+            const resultBox = document.createElement("div");
+            resultBox.id = "vizResultBox";
+            resultBox.style.cssText = `margin-top: 16px; text-align: center; width: 100%;`;
+
+            vizContainer.appendChild(generateBtn);
+            vizContainer.appendChild(resultBox);
+            heatmapContainer.after(vizContainer);
+            lucide.createIcons();
+
+            // Function to run Image Generation
+            generateBtn.addEventListener("click", async () => {
+                if (typeof puter === 'undefined' || !puter.ai) {
+                    alert("Puter.js is not loaded or available.");
+                    return;
+                }
+
+                generateBtn.disabled = true;
+                generateBtn.innerHTML = `<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;"></i> Generating Visualization...`;
+                lucide.createIcons();
+                resultBox.innerHTML = "<p style='color: var(--text-secondary); font-size: 0.9rem;'>Creating High-Resolution 3D medical visualization...</p>";
+
+                try {
+                    // Create strong prompt using body part and primary finding
+                    let bodyPart = "the organ";
+                    let finding = "medical conditions";
+                    if (data.analysis.detailed_report && data.analysis.detailed_report.header) {
+                        bodyPart = data.analysis.detailed_report.header.body_part || bodyPart;
+                    }
+                    finding = data.analysis.primary_finding || finding;
+
+                    const prompt = `Highly detailed 3D photorealistic medical visualization of a human ${bodyPart}, clearly highlighting areas indicating ${finding}. Microscopic and macroscopic view combination, cinematic volumetric lighting, cyan and glowing red warning colors, incredibly sharp focus, professional medical textbook render style, exceptional clarity.`;
+
+                    // Call Puter.js
+                    const imageElement = await puter.ai.txt2img(prompt, { model: "black-forest-labs/flux.2-pro" });
+
+                    // Style the resulting image
+                    imageElement.style.maxWidth = "100%";
+                    imageElement.style.maxHeight = "400px";
+                    imageElement.style.borderRadius = "8px";
+                    imageElement.style.border = "1px solid rgba(255,255,255,0.1)";
+                    imageElement.style.boxShadow = "0 8px 25px rgba(0,0,0,0.5)";
+
+                    // Show in DOM
+                    resultBox.innerHTML = "";
+                    resultBox.appendChild(imageElement);
+
+                    // Extract base64 and send to backend
+                    const canvas = document.createElement('canvas');
+                    canvas.width = imageElement.naturalWidth || imageElement.width || 1024;
+                    canvas.height = imageElement.naturalHeight || imageElement.height || 1024;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(imageElement, 0, 0);
+                    const base64Data = canvas.toDataURL('image/png');
+
+                    resultBox.innerHTML += "<p style='color: var(--accent-green); font-size: 0.85rem; margin-top: 8px;'>Updating PDF Report...</p>";
+
+                    const updateRes = await fetch('/api/update_report_viz', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: data.session_id,
+                            image_base64: base64Data
+                        })
+                    });
+
+                    if (updateRes.ok) {
+                        const updateData = await updateRes.json();
+                        resultBox.innerHTML += "<p style='color: var(--accent-green); font-size: 0.85rem; margin-top: 4px;'><i data-lucide='check-circle'></i> Attached to PDF Report successfully!</p>";
+                        // Update the download link if needed, though it usually uses the same path `/api/report/{filename}`
+                        if (updateData.report_url) {
+                            const dlBtn = document.getElementById("downloadReportBtn");
+                            if (dlBtn) dlBtn.onclick = () => window.open(updateData.report_url, '_blank');
+                        }
+                    } else {
+                        resultBox.innerHTML += "<p style='color: var(--accent-red); font-size: 0.85rem; margin-top: 4px;'><i data-lucide='alert-triangle'></i> Failed to attach to PDF.</p>";
+                    }
+                    lucide.createIcons();
+                } catch (e) {
+                    console.error("Image generation error:", e);
+                    resultBox.innerHTML = `<p style='color: var(--accent-red);'><i data-lucide="x-circle"></i> Error generating image: ${e.message}</p>`;
+                    lucide.createIcons();
+                } finally {
+                    generateBtn.style.display = 'none'; // Hide button after it succeeds/fails
+                }
+            });
+
+        }
+
         // Findings List
         const findingsList = document.getElementById("findingsList");
         findingsList.innerHTML = "";

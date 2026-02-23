@@ -847,13 +847,11 @@ class MedicalImageAnalyzer:
                 "severity": "low",
             })
 
-        # Generate Hi-Res CAM heatmap for top prediction - DISABLED
-        # primary_idx = top_indices[0]
-        # heatmap_path, annotated_path = self._generate_heatmap(
-        #     image, input_tensor, primary_idx, output_dir
-        # )
-        heatmap_path = None
-        annotated_path = None
+        # Generate Hi-Res CAM heatmap for top prediction
+        primary_idx = top_indices[0]
+        heatmap_path, annotated_path = self._generate_heatmap(
+            image, input_tensor, primary_idx, output_dir
+        )
 
         # Overall severity
         severities = [f["severity"] for f in findings]

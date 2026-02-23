@@ -27,8 +27,9 @@ from backend.analyzer import MedicalImageAnalyzer, MEDICAL_FINDINGS
 from backend.report_generator import generate_report, compress_pdf
 
 # ---------- Configuration ----------
-RESULTS_FOLDER = os.path.join(os.path.dirname(__file__), "results")
-REPORTS_FOLDER = os.path.join(os.path.dirname(__file__), "reports")
+import tempfile
+RESULTS_FOLDER = os.path.join(tempfile.gettempdir(), "HealthGuard_results")
+REPORTS_FOLDER = os.path.join(tempfile.gettempdir(), "HealthGuard_reports")
 FEEDBACK_FOLDER = os.path.join(os.path.dirname(__file__), "feedback")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "tiff", "tif", "dcm", "webp"}
 DATASET_EXTENSIONS = {"zip", "tar", "gz", "tgz", "tar.gz", "7z", "rar"}
@@ -159,6 +160,11 @@ def serve_login():
 def serve_admin():
     return send_from_directory("frontend", "admin.html")
 
+
+@app.route("/advocate")
+@app.route("/advocate/")
+def serve_advocate():
+    return send_from_directory("frontend", "advocate.html")
 
 @app.route("/<path:path>")
 def serve_static(path):
@@ -329,7 +335,8 @@ def analyze_scan():
             "original_filename": original_filename,
             "scan_type_result": scan_type_result,
             "patient_name": patient_name,
-            "upload_path": upload_path
+            "upload_path": upload_path,
+            "analysis_result": analysis_result
         }
         with open(os.path.join(results_dir, "session_metadata.json"), "w") as f:
             json.dump(metadata, f)
@@ -355,8 +362,8 @@ def analyze_scan():
                 "detailed_report": analysis_result.get("detailed_report"),
             },
             "images": {
-                "heatmap": f"/api/results/{session_id}/{analysis_result['heatmap_path']}",
-                "annotated": f"/api/results/{session_id}/{analysis_result['annotated_path']}",
+                "heatmap": f"/api/results/{session_id}/{analysis_result['heatmap_path']}" if analysis_result.get('heatmap_path') else None,
+                "annotated": f"/api/results/{session_id}/{analysis_result['annotated_path']}" if analysis_result.get('annotated_path') else None,
                 "medical_viz": f"/api/results/{session_id}/{analysis_result['medical_viz_path']}" if analysis_result.get('medical_viz_path') else None,
             },
             "report": {
@@ -527,6 +534,91 @@ def reanalyze_scan():
         import traceback
         traceback.print_exc()
         return jsonify({"error": f"Re-analysis failed: {str(e)}"}), 500
+
+
+@app.route("/api/update_report_viz", methods=["POST"])
+def update_report_viz():
+    """
+    Called by the frontend after generating a 3D med-viz using Puter.js.
+    Updates the session metadata and regenerates the PDF report to include it.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        session_id = data.get("session_id")
+        viz_base64 = data.get("image_base64")
+        
+        if not session_id or not viz_base64:
+            return jsonify({"error": "Missing session_id or image_base64"}), 400
+            
+        session_dir = os.path.join(RESULTS_FOLDER, session_id)
+        if not os.path.exists(session_dir):
+            return jsonify({"error": "Session not found"}), 404
+            
+        # 1. Save Base64 image to disk
+        # Strip data URL prefix if present
+        if viz_base64.startswith("data:image"):
+            viz_base64 = viz_base64.split(",")[1]
+            
+        import base64
+        img_bytes = base64.b64decode(viz_base64)
+        viz_filename = f"medical_viz.png"
+        viz_path = os.path.join(session_dir, viz_filename)
+        
+        with open(viz_path, "wb") as f:
+            f.write(img_bytes)
+            
+        # 2. Update metadata
+        metadata_path = os.path.join(session_dir, "session_metadata.json")
+        if not os.path.exists(metadata_path):
+            return jsonify({"error": "Session metadata not found"}), 404
+            
+        with open(metadata_path, "r") as f:
+            metadata = json.load(f)
+            
+        if "analysis_result" not in metadata:
+            return jsonify({"error": "Analysis data not found in session"}), 404
+            
+        # Add viz path to analysis_result
+        metadata["analysis_result"]["medical_viz_path"] = viz_filename
+        
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f)
+            
+        # 3. Regenerate PDF
+        report_filename = generate_report(
+            scan_type_result=metadata["scan_type_result"],
+            analysis_result=metadata["analysis_result"],
+            original_filename=metadata["original_filename"],
+            output_dir=REPORTS_FOLDER,
+            images_dir=session_dir,
+            detailed_report=metadata["analysis_result"].get("detailed_report")
+        )
+        
+        # Determine paths
+        report_path = os.path.join(REPORTS_FOLDER, report_filename)
+        compressed_path = os.path.join(REPORTS_FOLDER, f"comp_{report_filename}")
+        final_report_path = report_path
+        
+        if compress_pdf(report_path, compressed_path):
+            os.remove(report_path)
+            os.rename(compressed_path, report_path)
+            
+        # Return new download URL
+        return jsonify({
+            "success": True, 
+            "message": "Report updated with 3D visualization",
+            "report_url": f"/api/report/{report_filename}",
+            "medical_viz_url": f"/api/results/{session_id}/{viz_filename}"
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Failed to update report: {str(e)}"}), 500
+
 
 
 @app.route("/api/feedback/stats", methods=["GET"])
@@ -841,9 +933,9 @@ def analyze_batch():
                     "detailed_report": analysis_result.get("detailed_report"),
                 },
                 "images": {
-                    "heatmap": f"/api/results/{session_id}/{analysis_result['heatmap_path']}",
-                    "annotated": f"/api/results/{session_id}/{analysis_result['annotated_path']}",
-                    "medical_viz": f"/api/results/{session_id}/{analysis_result['medical_viz_path']}" if analysis_result.get("medical_viz_path") else None,
+                    "heatmap": f"/api/results/{session_id}/{analysis_result['heatmap_path']}" if analysis_result.get('heatmap_path') else None,
+                    "annotated": f"/api/results/{session_id}/{analysis_result['annotated_path']}" if analysis_result.get('annotated_path') else None,
+                    "medical_viz": f"/api/results/{session_id}/{analysis_result['medical_viz_path']}" if analysis_result.get('medical_viz_path') else None,
                 },
                 "report": {
                     "filename": report_filename,
@@ -920,6 +1012,146 @@ def download_report(filename):
         as_attachment=True,
         mimetype="application/pdf",
     )
+
+
+@app.route("/api/advocate/analyze", methods=["POST"])
+def analyze_prescription():
+    """
+    Takes a base64 image of a prescription, processes it directly with Groq Vision, 
+    and returns cheaper identical formulas.
+    """
+    try:
+        image_data = request.form.get("image_data")
+        if not image_data:
+            return jsonify({"error": "No image data provided"}), 400
+
+        # Use groq_insurance key as primary
+        groq_api_key = os.getenv("groq_insurance") or os.getenv("GROQ_API_KEY") or os.getenv("GROQ_INSURANCE_KEY")
+        if not groq_api_key:
+            return jsonify({"error": "groq_insurance API key is not configured in .env"}), 500
+
+        from groq import Groq
+        client = Groq(api_key=groq_api_key)
+
+        # Ensure base64 string is properly formatted for Groq request
+        if image_data.startswith("data:image"):
+            base64_url = image_data
+        else:
+            base64_url = f"data:image/jpeg;base64,{image_data}"
+
+        prompt = f"""
+        You are an expert pharmacology, Ayurveda, Siddha, and Homeopathy specialist AI based in India.
+        I have provided an image of a patient's prescription (handwritten or printed).
+        
+        First, carefully read and extract all the text from the prescription image.
+        Then, use that extracted text to find all prescribed medicines.
+        For each medicine found, analyze:
+        1. The medicine name, company/manufacturer, estimated price in INR, and exact formula/composition.
+        2. Rate the quality of the prescribed medicine as a percentage (0-100) based on brand reputation, bioavailability, manufacturing standards, and efficacy.
+        3. List common side effects of the prescribed medicine.
+        4. Suggest a cheaper GENERIC alternative with the EXACT SAME composition. Rate its quality percentage and list its side effects too.
+        5. Also suggest relevant alternatives from 3 traditional medicine systems: Ayurveda, Siddha, and Homeopathy.
+           For each traditional alternative, find a real medicine that treats the same condition/symptoms. Include quality percentage and side effects.
+        6. Finally, pick the BEST overall recommendation among all alternatives considering price, quality, and fewer side effects.
+        
+        Return the result strictly as a valid JSON object matching this schema:
+        {{
+            "extracted_text": "The raw text you successfully read from the image",
+            "results": [
+                {{
+                    "original_medicine": "Name of prescribed medicine",
+                    "original_company": "Name of manufacturer",
+                    "original_estimated_price": 500,
+                    "formula": "The chemical composition",
+                    "original_quality_percentage": 85,
+                    "original_side_effects": ["Nausea", "Headache", "Dizziness"],
+                    "suggested_medicine": "Name of cheaper generic alternative",
+                    "suggested_company": "Manufacturer of generic alternative",
+                    "suggested_estimated_price": 200,
+                    "quality_notes": "A brief note on why this is a good alternative",
+                    "medicine_image_url": "A real product image URL of the suggested medicine",
+                    "overview": "A 2-3 sentence overview of what this medicine does, its uses, and who should take it",
+                    "suggested_quality_percentage": 80,
+                    "suggested_side_effects": ["Nausea", "Mild stomach upset"],
+                    "alternative_systems": [
+                        {{
+                            "system": "Ayurveda",
+                            "medicine_name": "Name of the Ayurvedic medicine",
+                            "manufacturer": "Company like Dabur, Patanjali, Himalaya etc",
+                            "estimated_price": 150,
+                            "key_ingredients": "List of key herbs/ingredients",
+                            "therapeutic_use": "How this medicine treats the same condition",
+                            "overview": "Detailed 3-4 sentence description",
+                            "quality_percentage": 75,
+                            "side_effects": ["Mild gastric irritation"]
+                        }},
+                        {{
+                            "system": "Siddha",
+                            "medicine_name": "Name of the Siddha medicine",
+                            "manufacturer": "Company or traditional source",
+                            "estimated_price": 120,
+                            "key_ingredients": "List of key herbs/minerals",
+                            "therapeutic_use": "How this medicine treats the same condition",
+                            "overview": "Detailed 3-4 sentence description",
+                            "quality_percentage": 70,
+                            "side_effects": ["Rare allergic reactions"]
+                        }},
+                        {{
+                            "system": "Homeopathy",
+                            "medicine_name": "Name of the Homeopathic medicine",
+                            "manufacturer": "Company like SBL, Dr Reckeweg, Schwabe etc",
+                            "estimated_price": 100,
+                            "key_ingredients": "The main potency/ingredient",
+                            "therapeutic_use": "How this medicine treats the same condition",
+                            "overview": "Detailed 3-4 sentence description",
+                            "quality_percentage": 65,
+                            "side_effects": ["No known side effects"]
+                        }}
+                    ],
+                    "best_recommendation": {{
+                        "medicine_name": "The best overall alternative medicine name",
+                        "system": "Generic/Ayurveda/Siddha/Homeopathy",
+                        "reason": "Why this is the best choice considering price, quality, and side effects"
+                    }}
+                }}
+            ]
+        }}
+        
+        IMPORTANT: Provide real, accurate medicine names from each system. Quality percentages should be realistic.
+        Do not include any other text except the JSON object.
+        """
+
+        # Using Llama 4 Scout (multimodal) for direct image-to-JSON OCR+Reasoning
+        response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user", 
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": base64_url,
+                            },
+                        }
+                    ]
+                }
+            ],
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            temperature=0.2,
+            response_format={"type": "json_object"}
+        )
+
+        response_content = response.choices[0].message.content
+        parsed_response = json.loads(response_content)
+        
+        return jsonify(parsed_response)
+
+    except Exception as e:
+        print(f"[HealthGuard AI] ⚠️ Advocate Analysis Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
