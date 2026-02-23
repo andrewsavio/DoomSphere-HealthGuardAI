@@ -23,6 +23,19 @@ let messageHistory = [];
 let isTyping = false;
 let selectedImageFile = null;
 let currentSessionId = null; // Tracks active Supabase session record
+let currentInsuranceContext = null;
+
+// Parse URL Parameters for Insurance Context
+const urlParams = new URLSearchParams(window.location.search);
+const insuranceContextParam = urlParams.get('insurance_context');
+if (insuranceContextParam) {
+    try {
+        currentInsuranceContext = JSON.parse(decodeURIComponent(insuranceContextParam));
+        console.log("Loaded Insurance Context:", currentInsuranceContext);
+    } catch (e) {
+        console.error("Failed to parse insurance context", e);
+    }
+}
 
 // Configuration
 const CHAT_MODEL = 'claude-opus-4-6';
@@ -40,6 +53,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
         console.error("Failed to load generic config for API keys", err);
     }
+
+    // Auto-message for insurance context
+    if (currentInsuranceContext) {
+        const initialContextMsg = `I am looking at the following insurance policy you recommended:
+
+**Name:** ${currentInsuranceContext.name}
+**Provider:** ${currentInsuranceContext.provider}
+**Analysis:** ${currentInsuranceContext.analysis}
+
+Could you explain more about this, or should I ask my specific doubts?`;
+
+        // Trigger AI Response using existing flow
+        setTimeout(() => {
+            handleUserMessage(initialContextMsg);
+        }, 500);
+    }
+
     // Image Upload Handlers
     if (triggerImageUploadBtn) {
         triggerImageUploadBtn.addEventListener('click', () => chatImageInput.click());
@@ -395,7 +425,8 @@ async function sendPuterChatRequest(latestMessage, imageFile) {
 1. MEDICAL ACCURACY: Provide medically accurate info but constantly note you're not a doctor.
 2. PLAIN LANGUAGE: Explain medical concepts in simple terms.
 3. INSTRUCTION: The user prefers chatting in ${currentLanguage}. Respond exclusively in ${currentLanguage}.
-4. SCOPE: Discuss general health topics, interpret common lab values, and suggest when to see a doctor. Never diagnose.`;
+4. SCOPE: Discuss general health topics, interpret common lab values, and suggest when to see a doctor. Never diagnose.
+${currentInsuranceContext ? `\n\n5. INSURANCE CONTEXT: The user is asking about the following insurance policy. Answer questions specifically based on this data:\nName: ${currentInsuranceContext.name}\nProvider: ${currentInsuranceContext.provider}\nAnalysis: ${currentInsuranceContext.analysis}\nLink: ${currentInsuranceContext.websiteLink}` : ''}`;
 
     let combinedPrompt = systemPrompt + "\n\n--- Chat History ---\n";
 
@@ -487,7 +518,8 @@ async function sendGroqChatRequest(latestMessage) {
 1. MEDICAL ACCURACY: Provide medically accurate info but constantly note you're not a doctor.
 2. PLAIN LANGUAGE: Explain medical concepts in simple terms.
 3. INSTRUCTION: The user prefers chatting in ${currentLanguage}. Respond exclusively in ${currentLanguage}.
-4. SCOPE: Discuss general health topics, interpret common lab values, and suggest when to see a doctor. Never diagnose.`;
+4. SCOPE: Discuss general health topics, interpret common lab values, and suggest when to see a doctor. Never diagnose.
+${currentInsuranceContext ? `\n\n5. INSURANCE CONTEXT: The user is asking about the following insurance policy. Answer questions specifically based on this data:\nName: ${currentInsuranceContext.name}\nProvider: ${currentInsuranceContext.provider}\nAnalysis: ${currentInsuranceContext.analysis}\nLink: ${currentInsuranceContext.websiteLink}` : ''}`;
 
     const messages = [{ role: 'system', content: systemPrompt }];
 
@@ -542,7 +574,7 @@ async function saveInteractionToSupabase(userMsg, aiMsg) {
                 .single();
 
             if (sessionErr) throw sessionErr;
-            
+
             sessionId = newSession.id;
             currentSessionId = sessionId; // Locally lock into this session
 

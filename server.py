@@ -136,6 +136,10 @@ def serve_analyze():
 def serve_features():
     return send_from_directory("frontend", "features.html")
 
+@app.route("/insurance")
+def serve_insurance():
+    return send_from_directory("frontend", "insurance.html")
+
 @app.route("/about")
 def serve_about():
     return send_from_directory("frontend", "about.html")
@@ -167,7 +171,8 @@ def get_config():
     return jsonify({
         "supabase_url": SUPABASE_URL or os.getenv("SUPABASE_URL", ""),
         "supabase_anon_key": SUPABASE_KEY or os.getenv("SUPABASE_ANON_KEY", ""),
-        "groq_api_key": os.getenv("GROQ_API_KEY", "")
+        "groq_api_key": os.getenv("GROQ_API_KEY", ""),
+        "groq_insurance_key": os.getenv("groq_insurance", os.getenv("GROQ_INSURANCE_KEY", ""))
     })
 
 
