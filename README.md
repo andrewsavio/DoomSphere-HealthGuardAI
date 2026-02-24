@@ -82,4 +82,4 @@ MIT License — © 2026 DoomSphere
 
 ---
 
-*Built with ❤️ by DoomSphere*
+
