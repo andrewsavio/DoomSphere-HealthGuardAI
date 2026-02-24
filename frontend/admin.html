@@ -11,6 +11,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        // Synchronous auth check to prevent UI flash
+        (function () {
+            let hasSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith('sb-') && localStorage.key(i).endsWith('-auth-token')) {
+                    hasSession = true;
+                    break;
+                }
+            }
+            if (!hasSession) {
+                window.location.replace('/login');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="/styles.css">
 
     <style>
@@ -362,6 +377,15 @@
                 const { data: { session }, error } = await sbClient.auth.getSession();
                 if (error || !session) {
                     window.location.href = '/login';
+                    return;
+                }
+
+                // Check role
+                const userRole = session.user?.user_metadata?.role || 'user';
+                if (userRole !== 'admin') {
+                    // Redirect non-admins away
+                    if (userRole === 'patient') window.location.href = '/advocate';
+                    else window.location.href = '/analyze';
                     return;
                 }
 

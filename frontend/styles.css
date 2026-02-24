@@ -304,6 +304,7 @@ img {
     color: var(--text-secondary);
     transition: var(--transition-fast);
     position: relative;
+    display: none; /* Hidden by default to prevent UI flash */
 }
 
 .nav-link::after {

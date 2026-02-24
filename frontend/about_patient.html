@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About (Patient) — HealthGuard AI</title>
+    <meta name="description"
+        content="HealthGuard AI for Patients. Discover our advocacy and insurance verification features.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Compressor.js for client-side image compression -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Synchronous auth check to prevent UI flash
+        (function () {
+            let hasSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith('sb-') && localStorage.key(i).endsWith('-auth-token')) {
+                    hasSession = true;
+                    break;
+                }
+            }
+            if (!hasSession) {
+                window.location.replace('/login');
+            }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">HealthGuard</span>
+                <span class="brand-badge">AI</span>
+            </div>
+        </div>
+        <div class="nav-status" id="navStatus">
+            <div class="status-dot pulse"></div>
+            <span id="authStatusText">System Online</span>
+        </div>
+        <div class="nav-links">
+            <a href="/features" class="nav-link">Features</a>
+            <a href="/analyze" class="nav-link">Analyze</a>
+            <a href="/advocate" class="nav-link">Advocate</a>
+            <a href="/insurance" class="nav-link">Insurance</a>
+            <a href="/about-patient" class="nav-link active">About</a>
+            <a href="/chatbot" class="nav-link">Chat Bot</a>
+            <a href="/login" class="nav-link auth-link" id="navAuthLink" style="display: none;">Login</a>
+
+            <div id="userProfileMenu" class="user-profile-menu"
+                style="display: none; align-items: center; gap: 8px; margin-left: 10px;">
+                <div
+                    style="display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <i data-lucide="user" style="width: 14px; height: 14px; margin-right: 2px;"></i>
+                    <span id="profileName" style="font-size: 0.85rem; font-weight: 500;">User</span>
+                </div>
+                <button id="logoutBtn" class="btn btn-sm"
+                    style="background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: none; padding: 6px 12px; margin-left: 4px;"><i
+                        data-lucide="log-out" style="width: 14px; height: 14px;"></i> Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- About Section -->
+    <section class="about-section" id="about">
+        <div class="section-header">
+            <span class="section-badge">For Patients</span>
+            <h2 class="section-title">Your Health Journey</h2>
+        </div>
+        <div class="pipeline-steps">
+            <div class="pipeline-step">
+                <div class="pipeline-number">01</div>
+                <div class="pipeline-content">
+                    <h3>Patient Advocate</h3>
+                    <p>Navigate the healthcare system with ease. Our advocate feature helps you manage your
+                        interactions, ask the right questions, and stay informed on your treatment journey.</p>
+                </div>
+            </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-step">
+                <div class="pipeline-number">02</div>
+                <div class="pipeline-content">
+                    <h3>Insurance Verification</h3>
+                    <p>Upload your scan documents to verify exactly what your insurance covers. Get transparent
+                        estimates and avoid surprise medical bills securely and easily.</p>
+                </div>
+            </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-step">
+                <div class="pipeline-number">03</div>
+                <div class="pipeline-content">
+                    <h3>Empowerment</h3>
+                    <p>HealthGuard AI is dedicated to providing patients with the tools they need to be active
+                        participants in their own care.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="brand-icon">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <span class="brand-name">HealthGuard AI</span>
+            </div>
+            <p class="footer-disclaimer">
+                ⚠️ This platform is an AI-assisted tool and is NOT a substitute for professional medical diagnosis.
+                Always consult qualified healthcare professionals.
+            </p>
+            <p class="footer-copy">© 2026 HealthGuard AI by DoomSphere. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://js.puter.com/v2/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

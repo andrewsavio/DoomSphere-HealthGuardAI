@@ -145,6 +145,14 @@ def serve_insurance():
 def serve_about():
     return send_from_directory("frontend", "about.html")
 
+@app.route("/about-patient")
+def serve_about_patient():
+    return send_from_directory("frontend", "about_patient.html")
+
+@app.route("/about-doctor")
+def serve_about_doctor():
+    return send_from_directory("frontend", "about_doctor.html")
+
 @app.route("/chatbot")
 @app.route("/chatbot/")
 def serve_chatbot_index():
