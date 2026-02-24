@@ -150,8 +150,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (role === 'patient') {
-                // Patient can only use Advocate and Insurance (and Home/About)
-                if (href === '/analyze' || href === '/features' || href === '/chatbot') {
+                // Patient can use Advocate, Insurance, and Chatbot (and Home/About)
+                if (href === '/analyze' || href === '/features') {
                     shouldShow = false;
                 }
             } else if (role === 'doctor') {
@@ -176,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Enforce page-level access control based on role
         if (role === 'patient') {
-            if (currentPath === '/analyze' || currentPath === '/features' || currentPath === '/chatbot') {
+            if (currentPath === '/analyze' || currentPath === '/features') {
                 window.location.href = '/advocate';
             } else if (currentPath === '/about' || currentPath === '/about-doctor') {
                 window.location.href = '/about-patient';
