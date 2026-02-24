@@ -6,7 +6,6 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.5-red)
 ![Flask](https://img.shields.io/badge/Flask-3.1-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-
 ## ✨ Features
 
 - **🔍 Scan Type Detection** — Automatically identifies X-Ray, CT, MRI, Ultrasound, PET, Mammogram, DEXA, and Fluoroscopy scans
