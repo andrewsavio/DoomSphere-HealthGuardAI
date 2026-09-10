@@ -1,0 +1,15 @@
+{
+  "name": "healthguard-ai-frontend",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/vercel": "^7.8.0",
+    "astro": "^4.16.0"
+  }
+}

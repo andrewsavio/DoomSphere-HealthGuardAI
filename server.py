@@ -3,6 +3,11 @@ HealthGuard AI - Flask Backend Server
 Provides REST API endpoints for medical scan analysis.
 """
 
+import sys
+if sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import os
 from dotenv import load_dotenv
 load_dotenv()

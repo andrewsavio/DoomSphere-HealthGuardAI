@@ -262,7 +262,7 @@
 
         async function initAuth() {
             try {
-                const res = await fetch('/api/config');
+                const res = await fetch(`${window.HEALTHGUARD_API_BASE || window.location.origin}/api/config`);
                 const config = await res.json();
                 if (window.supabase && config.supabase_url && config.supabase_anon_key) {
                     sbClient = window.supabase.createClient(config.supabase_url, config.supabase_anon_key);
@@ -271,7 +271,7 @@
                 console.error("Config fetch error:", err);
             }
         }
-        initAuth();
+        const authReadyPromise = initAuth();
 
         window.addEventListener("scroll", () => {
             if (window.scrollY > 40) {
@@ -317,6 +317,9 @@
             const fullName = fullNameInput.value.trim();
             const role = document.getElementById('roleSelect').value;
 
+            if (!sbClient) {
+                await authReadyPromise;
+            }
             if (!sbClient) {
                 showError("Database connection not ready. Please wait a moment or check your environment keys.");
                 resetBtn();

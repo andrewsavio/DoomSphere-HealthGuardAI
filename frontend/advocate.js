@@ -1,5 +1,6 @@
 // advocate.js
 
+const API_BASE = window.API_BASE || window.HEALTHGUARD_API_BASE || window.location.origin;
 let selectedFile = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -20,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let ENV = {};
     try {
-        const res = await fetch('/api/config');
+        const res = await fetch(`${API_BASE}/api/config`);
         if (res.ok) ENV = await res.json();
     } catch (e) { }
 
@@ -110,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const reqData = new FormData();
             reqData.append("image_data", base64Image);
 
-            const analysisRes = await fetch('/api/advocate/analyze', {
+            const analysisRes = await fetch(`${API_BASE}/api/advocate/analyze`, {
                 method: 'POST',
                 body: reqData
             });
@@ -439,7 +440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         cardsGrid.parentElement.appendChild(panel);
 
         // Call the API
-        fetch('/api/check-interactions', {
+        fetch(`${API_BASE}/api/check-interactions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ medicines })
@@ -545,7 +546,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 resultDiv.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:12px;"><div style="width:18px;height:18px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div><span style="color:var(--text-secondary);font-size:0.85rem;">Checking...</span></div>`;
 
-                fetch('/api/check-interactions', {
+                fetch(`${API_BASE}/api/check-interactions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ medicines: meds })
@@ -581,7 +582,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             ayushSearchResult.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:16px;background:rgba(16,185,129,0.08);border-radius:10px;"><div style="width:20px;height:20px;border:2px solid #10b981;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div><span style="color:var(--text-secondary);font-size:0.85rem;">Searching AYUSH treatments for "${query}"...</span></div>`;
 
-            fetch('/api/ayush-lookup', {
+            fetch(`${API_BASE}/api/ayush-lookup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ query })

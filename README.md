@@ -76,6 +76,22 @@ DoomSphere-HealthGuardAI/
 
 This is an **AI-assisted analysis tool** and is **NOT** a substitute for professional medical diagnosis. Always consult qualified healthcare professionals for medical decisions.
 
+## ☁️ Deploying to Vercel
+
+The Flask + PyTorch backend (torch alone is ~450MB) cannot run on Vercel's serverless functions (250MB limit, short timeouts), and it also does on-disk model fine-tuning (`/api/train`, `/api/feedback`) that needs a persistent filesystem — incompatible with ephemeral serverless storage.
+
+The split that works:
+- **`astro-app/`** — the frontend, ported to Astro, deployed on Vercel. Set the `PUBLIC_API_BASE_URL` env var in the Vercel project to your backend's URL.
+- **Flask backend** (`server.py`) — deploy to a normal always-on host (Render, Railway, Fly.io, a VPS) that keeps a persistent disk and long-running processes.
+
+```bash
+cd astro-app
+npm install
+npm run build     # outputs .vercel/output — deploy with `vercel deploy` or via Git integration
+```
+
+Locally, both can run side by side: `python server.py` (port 5000) and `cd astro-app && npm run dev` (port 4321), with `PUBLIC_API_BASE_URL=http://localhost:5000` in `astro-app/.env`.
+
 ## 📝 License
 
 MIT License — © 2026 DoomSphere

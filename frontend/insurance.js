@@ -1,3 +1,5 @@
+const API_BASE = window.API_BASE || window.HEALTHGUARD_API_BASE || window.location.origin;
+
 document.addEventListener('DOMContentLoaded', () => {
     // Elements
     const ageSlider = document.getElementById('ageSlider');
@@ -150,7 +152,7 @@ Format each recommendation exactly like this:
 
         let groqKey = '';
         try {
-            const res = await fetch('/api/config');
+            const res = await fetch(`${API_BASE}/api/config`);
             const config = await res.json();
             groqKey = config.groq_insurance_key || config.groq_api_key;
         } catch (e) {

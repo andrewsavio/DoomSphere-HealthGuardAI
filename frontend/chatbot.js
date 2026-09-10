@@ -3,6 +3,8 @@
  * Interfaces directly with the Groq API for streaming inference without Flutter compiling.
  */
 
+const API_BASE = window.API_BASE || window.HEALTHGUARD_API_BASE || window.location.origin;
+
 // UI Elements
 const chatInput = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -45,7 +47,7 @@ let GROQ_API_KEY = '';
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Fetch API Key from backend securely for text-only fallbacks
     try {
-        const response = await fetch('/api/config');
+        const response = await fetch(`${API_BASE}/api/config`);
         if (response.ok) {
             const data = await response.json();
             GROQ_API_KEY = data.groq_api_key;
@@ -447,7 +449,7 @@ ${currentInsuranceContext ? `\n\n5. INSURANCE CONTEXT: The user is asking about 
         try {
             if (!window.supabaseClient) {
                 console.warn("Supabase client not immediately found. Attempting inline initialization...");
-                const res = await fetch('/api/config');
+                const res = await fetch(`${API_BASE}/api/config`);
                 const tempConfig = await res.json();
                 if (window.supabase && tempConfig.supabase_url && tempConfig.supabase_anon_key) {
                     window.supabaseClient = supabase.createClient(tempConfig.supabase_url, tempConfig.supabase_anon_key);

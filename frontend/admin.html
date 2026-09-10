@@ -363,7 +363,7 @@
         async function initAdmin() {
             try {
                 // Fetch config
-                const res = await fetch('/api/config');
+                const res = await fetch(`${window.HEALTHGUARD_API_BASE || window.location.origin}/api/config`);
                 const config = await res.json();
 
                 if (!config.supabase_url || !config.supabase_anon_key) {

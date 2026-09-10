@@ -1,0 +1,871 @@
+---
+const apiBase = import.meta.env.PUBLIC_API_BASE_URL || "";
+---
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<script define:vars={{ apiBase }}>window.HEALTHGUARD_API_BASE = apiBase; window.DEMO_MODE = !apiBase;</script>
+<script is:inline src="/demo-mode.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthGuard AI — Medical Scan Analysis</title>
+    <meta name="description"
+        content="Industry-grade AI-powered medical scan analysis. Upload any medical scan for instant AI analysis with Hi-Res CAM heatmap visualization and downloadable PDF reports.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script is:inline src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Compressor.js for client-side image compression -->
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/compressorjs/1.2.1/compressor.min.js"></script>
+
+    <!-- Puter.js for Image Generation -->
+    <script is:inline src="https://js.puter.com/v2/"></script>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Synchronous auth check to prevent UI flash
+        (function () {
+            let hasSession = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                if (localStorage.key(i).startsWith('sb-') && localStorage.key(i).endsWith('-auth-token')) {
+                    hasSession = true;
+                    break;
+                }
+            }
+            if (!hasSession) {
+                window.location.replace('/login');
+            }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="ambient-orb orb-1"></div>
+        <div class="ambient-orb orb-2"></div>
+        <div class="ambient-orb orb-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">HealthGuard</span>
+                <span class="brand-badge">AI</span>
+            </div>
+        </div>
+        <div class="nav-status" id="navStatus">
+            <div class="status-dot pulse"></div>
+            <span id="authStatusText">System Online</span>
+        </div>
+        <div class="nav-links">
+            <a href="/features" class="nav-link">Features</a>
+            <a href="/analyze" class="nav-link active">Analyze</a>
+            <a href="/advocate" class="nav-link">Advocate</a>
+            <a href="/insurance" class="nav-link">Insurance</a>
+            <a href="/about" class="nav-link">About</a>
+            <a href="/chatbot" class="nav-link">Chat Bot</a>
+            <!-- Auth Link Will be Injected by JS -->
+            <a href="/login" class="nav-link auth-link" id="navAuthLink" style="display: none;">Login</a>
+
+            <div id="userProfileMenu" class="user-profile-menu"
+                style="display: none; align-items: center; gap: 8px; margin-left: 10px;">
+                <div
+                    style="display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <i data-lucide="user" style="width: 14px; height: 14px; margin-right: 2px;"></i>
+                    <span id="profileName" style="font-size: 0.85rem; font-weight: 500;">User</span>
+                </div>
+                <button id="logoutBtn" class="btn btn-sm"
+                    style="background: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: none; padding: 6px 12px; margin-left: 4px;"><i
+                        data-lucide="log-out" style="width: 14px; height: 14px;"></i> Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i data-lucide="sparkles"></i>
+                <span>AI-Powered Medical Analysis</span>
+            </div>
+            <h1 class="hero-title">
+                <span class="gradient-text">Next-Gen</span> Medical
+                <br>Scan Intelligence
+            </h1>
+            <p class="hero-subtitle">
+                Upload any medical scan — X-Ray, MRI, CT, Ultrasound — and let our
+                DenseNet-121 AI model analyze, classify, and highlight regions of interest
+                with precision Hi-Res CAM heatmaps.
+            </p>
+            <div class="hero-actions">
+                <a href="#upload" class="btn btn-primary btn-lg" id="heroAnalyzeBtn">
+                    <i data-lucide="scan"></i>
+                    Start Analysis
+                </a>
+                <a href="#features" class="btn btn-ghost btn-lg">
+                    <i data-lucide="info"></i>
+                    Learn More
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-value">15+</span>
+                    <span class="stat-label">Medical Findings</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">8</span>
+                    <span class="stat-label">Scan Types</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">Hi-Res CAM</span>
+                    <span class="stat-label">Heatmap Engine</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">PDF</span>
+                    <span class="stat-label">Report Export</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="scan-preview-container">
+                <div class="scan-ring ring-outer"></div>
+                <div class="scan-ring ring-inner"></div>
+                <div class="scan-center">
+                    <i data-lucide="brain"></i>
+                </div>
+                <div class="floating-tag tag-1">X-Ray</div>
+                <div class="floating-tag tag-2">MRI</div>
+                <div class="floating-tag tag-3">CT Scan</div>
+                <div class="floating-tag tag-4">Ultrasound</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section Removed -->
+
+    <!-- Upload Section -->
+    <section class="upload-section" id="upload">
+        <div class="section-header">
+            <span class="section-badge">Analysis Engine</span>
+            <h2 class="section-title">Upload Your Scan</h2>
+            <p class="section-subtitle">Drag & drop or click to upload any medical scan image</p>
+        </div>
+
+        <div class="upload-container">
+            <!-- New Scan Details Inputs -->
+            <div class="scan-details-inputs" style="margin-top: 20px; text-align: left; width: 100%; max-width: 400px;">
+                <div class="input-group">
+                    <label for="patientNameInput"
+                        style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Patient
+                        Name (Optional)</label>
+                    <input type="text" id="patientNameInput" class="feedback-text-input" placeholder="e.g., John Doe"
+                        style="width: 100%; margin-bottom: 10px;">
+                </div>
+                <div class="input-row" style="display: flex; gap: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                        <label for="scanTypeInput"
+                            style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Scan
+                            Type</label>
+                        <input type="text" id="scanTypeInput" class="feedback-text-input" placeholder="e.g., CT Chest"
+                            style="width: 100%;">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label for="bodyPartInput"
+                            style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Body
+                            Part</label>
+                        <input type="text" id="bodyPartInput" class="feedback-text-input" placeholder="e.g., Thorax"
+                            style="width: 100%;">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-top: 10px;">
+                    <label for="languageSelect"
+                        style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Report
+                        Language (Translates Web Details)</label>
+                    <select id="languageSelect" class="feedback-select" style="width: 100%; margin-bottom: 10px;">
+                        <option value="en">English (Default)</option>
+                        <option value="hi">Hindi (हिंदी)</option>
+                        <option value="bn">Bengali (বাংলা)</option>
+                        <option value="te">Telugu (తెలుగు)</option>
+                        <option value="ta">Tamil (தமிழ்)</option>
+                        <option value="mr">Marathi (मराठी)</option>
+                        <option value="gu">Gujarati (ગુજરાતી)</option>
+                        <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                        <option value="ml">Malayalam (മലയാളം)</option>
+                        <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                    </select>
+                </div>
+                <div class="input-group" style="margin-top: 10px;">
+                    <label for="patientDescriptionInput"
+                        style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Patient
+                        Description / Clinical History</label>
+                    <textarea id="patientDescriptionInput" class="feedback-text-input"
+                        placeholder="e.g., Patient complains of chronic cough and chest pain..."
+                        style="width: 100%; height: 80px; resize: vertical; margin-bottom: 10px; padding: 8px;"></textarea>
+                </div>
+            </div>
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-zone-content" id="uploadContent">
+                    <div class="upload-icon-wrapper">
+                        <i data-lucide="cloud-upload" class="upload-main-icon"></i>
+                        <div class="upload-pulse"></div>
+                    </div>
+                    <h3>Drop your scan here</h3>
+                    <p>or click to browse files</p>
+                    <div class="upload-formats">
+                        <span class="format-tag">PNG</span>
+                        <span class="format-tag">JPG</span>
+                        <span class="format-tag">JPEG</span>
+                        <span class="format-tag">BMP</span>
+                        <span class="format-tag">TIFF</span>
+                        <span class="format-tag">WebP</span>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" multiple hidden>
+            </div>
+
+            <!-- Preview Area (multi-file) -->
+            <div class="preview-area hidden" id="previewArea">
+                <div class="preview-card">
+                    <div class="preview-header">
+                        <div class="preview-info">
+                            <i data-lucide="images"></i>
+                            <div>
+                                <span class="preview-filename" id="previewFilename"></span>
+                                <span class="preview-filesize" id="previewFilesize"></span>
+                            </div>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" id="removeFileBtn">
+                            <i data-lucide="x"></i>
+                            Remove All
+                        </button>
+                    </div>
+                    <div class="multi-preview-grid" id="multiPreviewGrid">
+                        <!-- Thumbnails populated by JS -->
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg btn-analyze" id="analyzeBtn">
+                    <i data-lucide="sparkles"></i>
+                    <span>Analyze Scans</span>
+                    <div class="btn-shimmer"></div>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-brain">
+                <div class="brain-pulse"></div>
+                <i data-lucide="brain"></i>
+            </div>
+            <h2>Analyzing Your Scan</h2>
+            <div class="loading-steps">
+                <div class="loading-step active" id="step1">
+                    <div class="step-indicator">
+                        <div class="step-spinner"></div>
+                    </div>
+                    <span>Classifying scan type...</span>
+                </div>
+                <div class="loading-step" id="step2">
+                    <div class="step-indicator">
+                        <div class="step-spinner"></div>
+                    </div>
+                    <span>Running DenseNet-121 analysis...</span>
+                </div>
+                <div class="loading-step" id="step3">
+                    <div class="step-indicator">
+                        <div class="step-spinner"></div>
+                    </div>
+                    <span>Generating Hi-Res CAM heatmap...</span>
+                </div>
+                <div class="loading-step" id="step4">
+                    <div class="step-indicator">
+                        <div class="step-spinner"></div>
+                    </div>
+                    <span>Creating PDF report...</span>
+                </div>
+            </div>
+            <div class="loading-progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section (Single Scan - kept for backwards compat, hidden during batch) -->
+    <section class="results-section hidden" id="resultsSection">
+        <div class="section-header">
+            <span class="section-badge result-badge">Analysis Complete</span>
+            <h2 class="section-title">Scan Results</h2>
+        </div>
+
+        <div class="results-container">
+            <!-- Top Summary Cards -->
+            <div class="summary-cards">
+                <div class="summary-card severity-card" id="severityCard">
+                    <div class="summary-icon">
+                        <i data-lucide="alert-triangle"></i>
+                    </div>
+                    <div class="summary-info">
+                        <span class="summary-label">Overall Severity</span>
+                        <span class="summary-value" id="severityValue">—</span>
+                    </div>
+                </div>
+            </div>
+            <div class="summary-info">
+                <span class="summary-label">Primary Finding</span>
+                <span class="summary-value" id="primaryFindingValue">—</span>
+            </div>
+        </div>
+        <div class="summary-card model-card">
+            <div class="summary-icon">
+                <i data-lucide="cpu"></i>
+            </div>
+            <div class="summary-info">
+                <span class="summary-label">AI Model</span>
+                <span class="summary-value" id="modelValue">—</span>
+                <span class="summary-conf" id="modelDevice">—</span>
+            </div>
+        </div>
+        </div>
+
+        <!-- Medical Visualization -->
+        <div class="medical-viz-panel hidden" id="medicalVizPanel" style="margin-top: 2rem; margin-bottom: 2rem;">
+            <div class="findings-header" style="margin-bottom: 1rem;">
+                <h3 style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-primary);">
+                    <i data-lucide="monitor-smartphone"></i>
+                    3D Medical Visualization
+                </h3>
+                <span class="section-badge"
+                    style="margin-left: auto; background: rgba(0, 255, 255, 0.1); color: var(--cyan); border: 1px solid var(--cyan-dim);">AI
+                    Generated</span>
+            </div>
+            <div class="viz-image-container"
+                style="position: relative; border-radius: 1rem; overflow: hidden; border: 1px solid var(--border-color); background: #000;">
+                <div class="scan-grid-overlay"
+                    style="position: absolute; inset: 0; background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 1;">
+                </div>
+                <img id="medicalVizImage" src="" alt="Medical Visualization"
+                    style="width: 100%; height: auto; display: block; object-fit: cover; max-height: 600px;">
+                <div
+                    style="position: absolute; top: 20px; left: 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan); z-index: 2;">
+                    <div>SCAN_ID: <span id="vizScanId">...</span></div>
+                    <div>MODE: VOLUMETRIC_RENDER</div>
+                </div>
+                <div
+                    style="position: absolute; bottom: 20px; right: 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan); text-align: right; z-index: 2;">
+                    <div>NVIDIA CLARA / MONAI</div>
+                    <div>RENDERING_ENGINE: SDXL-TURBO</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Findings -->
+        <div class="findings-panel">
+            <div class="findings-header">
+                <h3><i data-lucide="clipboard-list"></i> Detailed Findings</h3>
+            </div>
+            <div class="findings-list" id="findingsList">
+            </div>
+        </div>
+
+        <!-- Scan Type Breakdown -->
+        <div class="scan-breakdown-panel">
+            <div class="findings-header">
+                <h3><i data-lucide="bar-chart-3"></i> Scan Type Probability</h3>
+            </div>
+            <div class="scan-type-bars" id="scanTypeBars">
+            </div>
+        </div>
+
+        <!-- Download Section -->
+        <div class="download-panel">
+            <div class="download-content">
+                <div class="download-icon">
+                    <i data-lucide="file-text"></i>
+                </div>
+                <div class="download-info">
+                    <h3>Download Full Report</h3>
+                    <p>Get a comprehensive PDF report with all findings, annotated images, heatmaps, and medical
+                        disclaimer.</p>
+                </div>
+                <button class="btn btn-primary btn-lg" id="downloadPdfBtn">
+                    <i data-lucide="download"></i>
+                    Download PDF Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Feedback Panel -->
+        <div class="feedback-panel" id="feedbackPanel">
+            <div class="feedback-header">
+                <div class="feedback-header-icon">
+                    <i data-lucide="message-square-plus"></i>
+                </div>
+                <div>
+                    <h3>Professional Feedback & AI Training</h3>
+                    <p>Help the AI learn — provide your expert assessment. The model uses reinforcement learning to
+                        improve from your feedback.</p>
+                </div>
+            </div>
+
+            <div class="feedback-form" id="feedbackForm">
+                <div class="feedback-field">
+                    <label class="feedback-label">
+                        <i data-lucide="scan"></i>
+                        detected Scan Type (Editable)
+                    </label>
+                    <input type="text" class="feedback-text-input" id="feedbackScanTypeInput"
+                        placeholder="e.g., Chest X-Ray, MRI Brain, CT Abdomen" value="">
+                </div>
+                <div class="feedback-field">
+                    <label class="feedback-label" for="feedbackDescription">
+                        <i data-lucide="file-text"></i>
+                        Description / About the Dataset
+                    </label>
+                    <textarea class="feedback-textarea" id="feedbackDescription"
+                        placeholder="Describe the medical scan, dataset origin, imaging conditions, patient demographics, or any relevant clinical context..."
+                        rows="3"></textarea>
+                </div>
+                <div class="feedback-field">
+                    <label class="feedback-label" for="feedbackNotes">
+                        <i data-lucide="file-edit"></i>
+                        Professional Notes / Observations
+                    </label>
+                    <textarea class="feedback-textarea" id="feedbackNotes"
+                        placeholder="Provide detailed observations, corrections, or additional findings that the AI missed. Your expertise helps the model learn and improve..."
+                        rows="3"></textarea>
+                </div>
+                <div class="feedback-field">
+                    <label class="feedback-label">
+                        <i data-lucide="star"></i>
+                        How accurate was the AI prediction?
+                    </label>
+                    <div class="star-rating" id="starRating">
+                        <button class="star-btn" data-rating="1" title="Very Inaccurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="2" title="Somewhat Inaccurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="3" title="Partially Accurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="4" title="Mostly Accurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <button class="star-btn" data-rating="5" title="Very Accurate">
+                            <i data-lucide="star"></i>
+                        </button>
+                        <span class="rating-text" id="ratingText">Select a rating</span>
+                    </div>
+                </div>
+                <div class="feedback-field">
+                    <label class="feedback-label" for="correctFinding">
+                        <i data-lucide="stethoscope"></i>
+                        Correct Medical Finding
+                    </label>
+                    <select class="feedback-select" id="correctFinding">
+                        <option value="">— Select the correct medical finding —</option>
+                        <option value="Normal - No significant findings">Normal - No significant findings</option>
+                        <option value="Potential Opacity / Mass">Potential Opacity / Mass</option>
+                        <option value="Calcification Detected">Calcification Detected</option>
+                        <option value="Fracture Indication">Fracture Indication</option>
+                        <option value="Soft Tissue Abnormality">Soft Tissue Abnormality</option>
+                        <option value="Fluid Accumulation">Fluid Accumulation</option>
+                        <option value="Structural Anomaly">Structural Anomaly</option>
+                        <option value="Inflammation / Infection Signs">Inflammation / Infection Signs</option>
+                        <option value="Degenerative Changes">Degenerative Changes</option>
+                        <option value="Vascular Abnormality">Vascular Abnormality</option>
+                        <option value="Foreign Body Detected">Foreign Body Detected</option>
+                        <option value="Post-surgical Changes">Post-surgical Changes</option>
+                        <option value="Lymph Node Enlargement">Lymph Node Enlargement</option>
+                        <option value="Organ Enlargement">Organ Enlargement</option>
+                        <option value="Bone Density Variation">Bone Density Variation</option>
+                        <option value="__other__">🔬 Other — Type your own finding...</option>
+                    </select>
+                    <div class="custom-finding-input hidden" id="customFindingWrapper">
+                        <input type="text" class="feedback-text-input" id="customFindingInput"
+                            placeholder="Type the medical finding name (e.g., Pleural Effusion, Pneumothorax)..." />
+                        <p class="custom-finding-hint">
+                            <i data-lucide="info"></i>
+                            The AI will learn this new finding through reinforcement learning.
+                        </p>
+                    </div>
+                </div>
+                <div class="feedback-field">
+                    <label class="feedback-label">
+                        <i data-lucide="alert-triangle"></i>
+                        Correct severity level
+                    </label>
+                    <div class="severity-buttons" id="severityButtons">
+                        <button class="severity-btn severity-btn-low" data-severity="low">
+                            <span class="severity-dot"></span>
+                            Low
+                        </button>
+                        <button class="severity-btn severity-btn-medium" data-severity="medium">
+                            <span class="severity-dot"></span>
+                            Medium
+                        </button>
+                        <button class="severity-btn severity-btn-high" data-severity="high">
+                            <span class="severity-dot"></span>
+                            High
+                        </button>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-lg feedback-submit-btn" id="submitFeedbackBtn">
+                    <i data-lucide="brain"></i>
+                    <span>Submit Feedback & Train AI</span>
+                    <div class="btn-shimmer"></div>
+                </button>
+            </div>
+
+            <div class="feedback-success hidden" id="feedbackSuccess">
+                <div class="feedback-success-icon">
+                    <i data-lucide="check-circle-2"></i>
+                </div>
+                <h4>Feedback Applied Successfully!</h4>
+                <p class="feedback-success-message" id="feedbackMessage"></p>
+                <div class="feedback-stats-mini" id="feedbackStatsMini"></div>
+                <div class="feedback-actions">
+                    <button class="btn btn-primary btn-lg" id="reanalyzeBtn">
+                        <i data-lucide="refresh-cw"></i>
+                        Re-Analyze with Updated Model
+                        <div class="btn-shimmer"></div>
+                    </button>
+                    <button class="btn btn-ghost" id="addMoreFeedbackBtn">
+                        <i data-lucide="message-square-plus"></i>
+                        Add More Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Explore Insurances -->
+        <div class="explore-insurances-area" style="text-align: center; margin-bottom: 2rem;">
+            <button class="btn btn-primary btn-lg" id="exploreInsurancesBtn"
+                style="background: var(--accent-teal); color: #000; border: none; font-weight: 600;">
+                <i data-lucide="shield"></i>
+                Explore Relevant Insurances
+            </button>
+        </div>
+
+        <!-- Insurance Results Panel -->
+        <div id="scanInsuranceResults" class="hidden"
+            style="margin-bottom: 2rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+            <div class="findings-header" style="margin-bottom: 1rem;">
+                <h3><i data-lucide="shield"></i> Recommended Indian Insurances</h3>
+            </div>
+            <div id="scanInsuranceList" style="display: flex; flex-direction: column; gap: 1rem;">
+                <!-- AI recommendations will populate here -->
+            </div>
+        </div>
+
+        <!-- Drug Interaction Checker in Scan Results -->
+        <div id="scanInteractionChecker"
+            style="margin-bottom: 2rem; background: rgba(0,0,0,0.3); border: 2px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 20px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                <div
+                    style="width:38px;height:38px;min-width:38px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
+                    ⚠️</div>
+                <div>
+                    <h3 style="margin:0;font-size:1.05rem;"><i data-lucide="alert-triangle"
+                            style="width:16px;height:16px;vertical-align:middle;color:#f59e0b;"></i> Drug Interaction
+                        Checker</h3>
+                    <p style="margin:2px 0 0;font-size:0.78rem;color:var(--text-secondary);">Check if your medicines
+                        interact dangerously with each other</p>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:12px;">
+                <input id="scanMedInput" type="text" placeholder="Enter medicines separated by commas..."
+                    style="flex:1;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text-primary);font-size:0.88rem;outline:none;">
+                <button id="scanCheckInteractionBtn" type="button" class="btn btn-primary"
+                    style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;padding:10px 18px;font-weight:600;white-space:nowrap;">
+                    <i data-lucide="search" style="width:14px;height:14px;"></i> Check
+                </button>
+            </div>
+            <div id="scanInteractionResult"></div>
+        </div>
+
+        <!-- New Scan Button -->
+        <div class="new-scan-area">
+            <button class="btn btn-ghost btn-lg" id="newScanBtn">
+                <i data-lucide="rotate-ccw"></i>
+                Analyze Another Scan
+            </button>
+        </div>
+        </div>
+    </section>
+
+    <!-- ===== Batch Results Section (Accordion) ===== -->
+    <section class="results-section hidden" id="batchResultsSection">
+        <div class="section-header">
+            <span class="section-badge result-badge">Batch Analysis Complete</span>
+            <h2 class="section-title">Scan Results</h2>
+            <p class="section-subtitle" id="batchResultsSummary"></p>
+        </div>
+
+        <div class="batch-results-container">
+            <!-- Accordion items populated by JS -->
+            <div id="batchAccordion" class="batch-accordion"></div>
+
+            <!-- Download All -->
+            <div class="download-panel" style="margin-top: 1.5rem;">
+                <div class="download-content">
+                    <div class="download-icon">
+                        <i data-lucide="archive"></i>
+                    </div>
+                    <div class="download-info">
+                        <h3>Download All Reports</h3>
+                        <p>Download all PDF reports in a single ZIP archive.</p>
+                    </div>
+                    <button class="btn btn-primary btn-lg" id="downloadAllBtn">
+                        <i data-lucide="download"></i>
+                        Download All (ZIP)
+                    </button>
+                </div>
+            </div>
+
+            <!-- New Scan Button -->
+            <div class="new-scan-area">
+                <button class="btn btn-ghost btn-lg" id="newBatchScanBtn">
+                    <i data-lucide="rotate-ccw"></i>
+                    Analyze More Scans
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== Dataset Training Section ===== -->
+    <section class="training-section" id="trainingSection">
+        <div class="section-header">
+            <span class="section-badge training-badge">
+                <i data-lucide="database"></i>
+                Dataset Training
+            </span>
+            <h2 class="section-title">Train AI with Your Dataset</h2>
+            <p class="section-subtitle">Upload medical image datasets from Kaggle or any source. The AI will learn from
+                your data to improve its diagnostic accuracy.</p>
+        </div>
+
+        <div class="training-container">
+            <!-- Training Upload Zone -->
+            <div class="training-card">
+
+                <div class="training-card-header">
+                    <div class="training-card-icon">
+                        <i data-lucide="hard-drive-upload"></i>
+                    </div>
+                    <div>
+                        <h3>Upload Dataset</h3>
+                        <p>Supports ZIP, TAR.GZ, or individual images from Kaggle and other sources</p>
+                    </div>
+                </div>
+
+                <div class="training-upload-zone" id="trainingUploadZone">
+                    <input type="file" id="datasetFileInput"
+                        accept=".zip,.tar,.tar.gz,.tgz,.png,.jpg,.jpeg,.bmp,.tiff,.webp" multiple hidden>
+                    <input type="file" id="datasetFolderInput" webkitdirectory directory multiple hidden>
+                    <div class="training-upload-content" id="trainUploadContent">
+                        <div class="training-upload-icon">
+                            <i data-lucide="folder-archive"></i>
+                        </div>
+                        <h4>Drop Dataset Here or Choose Upload Method</h4>
+                        <p>Upload a folder of medical images or a ZIP/TAR.GZ archive</p>
+                        <div class="training-upload-buttons">
+                            <button class="btn btn-primary btn-sm" id="browseFolderBtn" type="button">
+                                <i data-lucide="folder-open"></i>
+                                <span>Browse Folder</span>
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="browseFilesBtn" type="button">
+                                <i data-lucide="file-archive"></i>
+                                <span>Browse ZIP / Files</span>
+                            </button>
+                        </div>
+                        <div class="upload-formats">
+                            <span class="format-tag">FOLDER</span>
+                            <span class="format-tag">.ZIP</span>
+                            <span class="format-tag">.TAR.GZ</span>
+                            <span class="format-tag">.PNG</span>
+                            <span class="format-tag">.JPG</span>
+                            <span class="format-tag">.TIFF</span>
+                        </div>
+                    </div>
+                    <!-- Preview after selecting -->
+                    <div class="training-file-preview hidden" id="trainingFilePreview">
+                        <div class="training-file-info">
+                            <i data-lucide="folder-open" id="datasetPreviewIcon"></i>
+                            <div>
+                                <span class="training-filename" id="trainingFilename"></span>
+                                <span class="training-filesize" id="trainingFilesize"></span>
+                            </div>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" id="removeDatasetBtn">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dataset Description -->
+                <div class="training-field">
+                    <label class="feedback-label" for="datasetDescription">
+                        <i data-lucide="align-left"></i>
+                        Dataset Description
+                    </label>
+                    <textarea class="feedback-textarea" id="datasetDescription"
+                        placeholder="Describe the dataset: source (e.g., Kaggle chest X-ray dataset), type of images, conditions/findings represented, number of classes..."
+                        rows="3"></textarea>
+                </div>
+
+                <!-- Finding Label (optional) -->
+                <div class="training-field">
+                    <label class="feedback-label" for="datasetFindingLabel">
+                        <i data-lucide="tag"></i>
+                        Finding Label <span class="optional-badge">(Optional)</span>
+                    </label>
+                    <input type="text" class="feedback-text-input" id="datasetFindingLabel"
+                        placeholder="If all images represent the same finding, enter the label here. Leave blank to use subfolder names.">
+                    <p class="custom-finding-hint">
+                        <i data-lucide="info"></i>
+                        If your dataset has subfolders (e.g., /Normal, /Pneumonia), each subfolder name becomes a label
+                        automatically.
+                    </p>
+                </div>
+
+                <!-- Temp Storage Location -->
+                <div class="training-field">
+                    <label class="feedback-label">
+                        <i data-lucide="hard-drive"></i>
+                        Temp Storage Location
+                    </label>
+                    <div class="temp-location-selector">
+                        <label class="temp-option">
+                            <input type="radio" name="tempLocation" value="system" checked>
+                            <span class="temp-option-label">
+                                <i data-lucide="monitor"></i>
+                                System Temp (Default)
+                            </span>
+                        </label>
+                        <label class="temp-option">
+                            <input type="radio" name="tempLocation" value="project">
+                            <span class="temp-option-label">
+                                <i data-lucide="folder"></i>
+                                Project Folder (Safe Mode)
+                            </span>
+                        </label>
+                    </div>
+                    <p class="custom-finding-hint">
+                        <i data-lucide="info"></i>
+                        Select "Project Folder" if you encounter "File Not Found" errors during training.
+                    </p>
+                </div>
+
+                <!-- Epochs -->
+                <div class="training-field">
+                    <label class="feedback-label">
+                        <i data-lucide="repeat"></i>
+                        Training Epochs
+                    </label>
+                    <div class="epoch-selector">
+                        <button class="epoch-btn" data-epochs="1" type="button">1</button>
+                        <button class="epoch-btn" data-epochs="3" type="button">3</button>
+                        <button class="epoch-btn" data-epochs="5" type="button">5</button>
+                        <button class="epoch-btn" data-epochs="10" type="button">10</button>
+                        <div class="epoch-custom-wrapper">
+                            <input type="number" class="epoch-custom-input" id="epochCustomInput" min="1" max="100"
+                                value="3" placeholder="Custom">
+                            <span class="epoch-custom-label">cycles</span>
+                        </div>
+                    </div>
+                    <p class="custom-finding-hint" id="epochHint">
+                        <i data-lucide="info"></i>
+                        3 epochs — Recommended for most datasets
+                    </p>
+                </div>
+
+                <!-- Train Button -->
+                <button class="btn btn-primary btn-lg training-start-btn" id="startTrainingBtn" disabled>
+                    <i data-lucide="zap"></i>
+                    <span>Start Training</span>
+                    <div class="btn-shimmer"></div>
+                </button>
+            </div>
+
+            <!-- Training Progress Panel (hidden by default) -->
+            <div class="training-progress-panel hidden" id="trainingProgressPanel">
+                <div class="training-progress-header">
+                    <div class="training-progress-icon">
+                        <i data-lucide="brain"></i>
+                        <div class="brain-pulse"></div>
+                    </div>
+                    <h3>Training in Progress</h3>
+                    <p id="trainingStatusMessage">Preparing dataset...</p>
+                </div>
+                <div class="training-progress-bar-container">
+                    <div class="training-progress-bar">
+                        <div class="training-progress-fill" id="trainingProgressFill" style="width: 0%"></div>
+                    </div>
+                    <span class="training-progress-pct" id="trainingProgressPct">0%</span>
+                </div>
+            </div>
+
+            <!-- Training Result Panel (hidden by default) -->
+            <div class="training-result-panel hidden" id="trainingResultPanel">
+                <div class="feedback-success-icon">
+                    <i data-lucide="check-circle-2"></i>
+                </div>
+                <h4>Training Complete!</h4>
+                <p class="training-result-message" id="trainingResultMessage"></p>
+                <div class="training-result-stats" id="trainingResultStats">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="feedback-actions">
+                    <button class="btn btn-primary btn-lg" id="trainAnotherBtn">
+                        <i data-lucide="plus-circle"></i>
+                        Train with Another Dataset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section Removed -->
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="brand-icon">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <span class="brand-name">HealthGuard AI</span>
+            </div>
+            <p class="footer-disclaimer">
+                ⚠️ This is an AI-assisted analysis tool and is NOT a substitute for professional medical diagnosis.
+                Always consult qualified healthcare professionals.
+            </p>
+            <p class="footer-copy">© 2026 HealthGuard AI by DoomSphere. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script is:inline src="https://js.puter.com/v2/"></script>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script is:inline src="/app.js"></script>
+</body>
+
+</html>

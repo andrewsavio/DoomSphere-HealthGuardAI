@@ -36,7 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const logoutBtn = document.getElementById("logoutBtn");
 
     // ---------- Global Config & Auth State ----------
-    const API_BASE = window.location.origin;
+    const API_BASE = window.HEALTHGUARD_API_BASE || window.location.origin;
+    window.API_BASE = API_BASE;
     window.AppConfig = {};
     window.currentUser = null;
     let currentScanData = null; // Store scan data for insurance prompt
@@ -958,7 +959,7 @@ Analyze this medical scan image in detail and return a valid JSON object ONLY, w
 
                     resultBox.innerHTML += "<p style='color: var(--accent-green); font-size: 0.85rem; margin-top: 8px;'>Updating PDF Report...</p>";
 
-                    const updateRes = await fetch('/api/update_report_viz', {
+                    const updateRes = await fetch(`${API_BASE}/api/update_report_viz`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1417,7 +1418,7 @@ Format each recommendation exactly like this:
                 scan_type: data.scan_type.scan_type || "Unknown"
             };
 
-            const response = await fetch(`/ api / feedback`, {
+            const response = await fetch(`${API_BASE}/api/feedback`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
@@ -1508,7 +1509,7 @@ Format each recommendation exactly like this:
             downloadAllBtn.querySelector("i")?.classList.add("spin");
 
             try {
-                const response = await fetch(`${API_BASE} / api / reports / download - all`, {
+                const response = await fetch(`${API_BASE}/api/reports/download-all`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ filenames: batchReportFilenames }),
@@ -1687,7 +1688,7 @@ Format each recommendation exactly like this:
                 custom_finding_is_new: isCustom,
             };
             try {
-                const response = await fetch(`${API_BASE} / api / feedback`, {
+                const response = await fetch(`${API_BASE}/api/feedback`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
@@ -1788,7 +1789,7 @@ Format each recommendation exactly like this:
             }, 1200);
 
             try {
-                const response = await fetch(`${API_BASE} /api/reanalyze`, {
+                const response = await fetch(`${API_BASE}/api/reanalyze`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -2130,7 +2131,7 @@ Format each recommendation exactly like this:
                     reject(new Error("Upload timed out"));
                 });
 
-                xhr.open("POST", `${API_BASE} / api / train`);
+                xhr.open("POST", `${API_BASE}/api/train`);
                 xhr.timeout = 0; // No timeout for large uploads
                 xhr.send(formData);
             });
@@ -2138,7 +2139,7 @@ Format each recommendation exactly like this:
             // Poll training progress while waiting for server response
             let trainingPollInterval = setInterval(async () => {
                 try {
-                    const statusRes = await fetch(`${API_BASE} / api / train / status`);
+                    const statusRes = await fetch(`${API_BASE}/api/train/status`);
                     const status = await statusRes.json();
                     if (status.is_training && status.progress > 0) {
                         // Map server progress (0-100) to bar progress (50-100)
@@ -2279,7 +2280,7 @@ Format each recommendation exactly like this:
 
             scanInteractionResult.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:14px;background:rgba(245,158,11,0.08);border-radius:10px;"><div style="width:20px;height:20px;border:2px solid #f59e0b;border-top-color:transparent;border-radius:50%;animation:scanSpin 0.8s linear infinite;"></div><span style="color:var(--text-secondary);font-size:0.85rem;">Analyzing drug interactions via AI...</span></div><style>@keyframes scanSpin{to{transform:rotate(360deg)}}</style>`;
 
-            fetch('/api/check-interactions', {
+            fetch(`${API_BASE}/api/check-interactions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ medicines: meds })
