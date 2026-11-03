@@ -13,6 +13,7 @@ import zipfile
 import tarfile
 import tempfile
 import threading
+import time
 import io
 import requests
 import base64
@@ -192,10 +193,38 @@ GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_CHAT_MODEL = "llama-3.3-70b-versatile"
 GROQ_MAX_MESSAGES = 20
 GROQ_MAX_CHARS = 40000
+GROQ_RATE_LIMIT = int(os.getenv("GROQ_RATE_LIMIT", "20"))    # requests per client per window
+GROQ_RATE_WINDOW = int(os.getenv("GROQ_RATE_WINDOW", "60"))  # window length in seconds
+_groq_hits = {}
+_groq_hits_lock = threading.Lock()
 
 
-def _groq_error(message, status):
-    return jsonify({"error": {"message": message}}), status
+def _groq_error(message, status, headers=None):
+    response = jsonify({"error": {"message": message}})
+    response.status_code = status
+    for key, value in (headers or {}).items():
+        response.headers[key] = value
+    return response
+
+
+def _groq_rate_limit_exceeded(client_ip):
+    """Sliding-window limit per client IP, kept in memory.
+
+    ponytail: per-process state. With several gunicorn workers each keeps its own count,
+    so the real limit is workers x GROQ_RATE_LIMIT. Move it to Redis if you scale out.
+    """
+    now = time.time()
+    with _groq_hits_lock:
+        recent = [t for t in _groq_hits.get(client_ip, []) if now - t < GROQ_RATE_WINDOW]
+        exceeded = len(recent) >= GROQ_RATE_LIMIT
+        if not exceeded:
+            recent.append(now)
+        _groq_hits[client_ip] = recent
+        if len(_groq_hits) > 5000:
+            # Forget idle clients so the dict cannot grow without limit.
+            for ip in [ip for ip, times in _groq_hits.items() if not times or now - times[-1] >= GROQ_RATE_WINDOW]:
+                del _groq_hits[ip]
+    return exceeded
 
 
 @app.route("/api/groq/chat", methods=["POST"])
@@ -205,6 +234,10 @@ def groq_chat_proxy():
     Body: {"purpose": "chat" | "insurance", "messages": [...], "temperature": float, "max_tokens": int}
     The model is fixed server-side. Callers cannot pick it or supply a key.
     """
+    if _groq_rate_limit_exceeded(request.remote_addr):
+        return _groq_error("Too many AI requests. Please wait a minute and try again.", 429,
+                           {"Retry-After": str(GROQ_RATE_WINDOW)})
+
     payload = request.get_json(silent=True) or {}
     messages = payload.get("messages")
 

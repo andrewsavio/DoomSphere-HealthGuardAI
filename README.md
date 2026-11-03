@@ -57,6 +57,8 @@ The server reads these environment variables. The names are the ones `server.py`
 
 Keep keys in environment variables or a local `.env` file. Don't commit them.
 
+The AI proxy (`POST /api/groq/chat`) allows `GROQ_RATE_LIMIT` requests (default 20) per client IP every `GROQ_RATE_WINDOW` seconds (default 60). The limit is per process. Use Redis if you run several workers.
+
 ## Project layout
 
 ```
