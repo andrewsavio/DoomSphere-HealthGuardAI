@@ -1,85 +1,86 @@
-# 🛡️ HealthGuard AI — Medical Scan Analysis Engine
+# HealthGuard AI — Medical Scan Analysis
 
-> AI-powered medical scan analysis with DenseNet-121 deep learning, Hi-Res CAM heatmap visualization, and comprehensive PDF report generation.
+Upload a medical scan (X-ray, CT, MRI and others) and get an AI-assisted analysis: scan-type detection, Grad-CAM heatmaps, marked regions, and a downloadable PDF report. A companion Flutter app in `chatbot_app/` covers patient and doctor workflows.
+
+> **Research prototype.** This is not a medical device and not a substitute for clinical diagnosis. The output has not been clinically validated.
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.5-red)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.6+-red)
 ![Flask](https://img.shields.io/badge/Flask-3.1-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-## ✨ Features
 
-- **🔍 Scan Type Detection** — Automatically identifies X-Ray, CT, MRI, Ultrasound, PET, Mammogram, DEXA, and Fluoroscopy scans
-- **🧠 DenseNet-121 Analysis** — Deep learning model detecting 15+ medical findings
-- **🔥 Hi-Res CAM Heatmaps** — Visual explanations showing AI focus regions
-- **📐 Region Marking** — Automatic contour detection with bounding boxes and severity indicators
-- **📄 PDF Reports** — Professional downloadable reports with all findings and images
-- **⚡ Severity Scoring** — Color-coded Low/Medium/High severity classification
+## Features
 
-## 🚀 Quick Start
+- **Scan upload and analysis**: single scans (`POST /api/analyze`) or batches (`POST /api/analyze-batch`)
+- **Scan-type detection**: `backend/scan_classifier.py` identifies the modality
+- **Heatmaps**: Grad-CAM visualisations of the regions the model used
+- **Region marking**: contours and bounding boxes drawn on the image (OpenCV)
+- **PDF reports**: generated with fpdf2. Noto fonts for Tamil and Oriya are bundled.
+- **Feedback loop**: `POST /api/feedback` records corrections, and `POST /api/train` updates the classifier head. The weights are saved to `models/healthguard_brain.pth`.
 
-### Prerequisites
+## How it works
 
-- Python 3.9 or higher
-- pip package manager
+1. **Upload**: the user uploads a scan through the web UI or the API.
+2. **Classify**: the scan type is detected.
+3. **Analyse**: a DenseNet-121 backbone (ImageNet weights) with a trainable classifier head produces features. Findings and summaries are generated through the Groq API.
+4. **Visualise**: Grad-CAM heatmaps and contour-based region marking are drawn on the image.
+5. **Report**: a PDF is generated for download.
 
-### Installation
+## Quick start
+
+**Prerequisites:** Python 3.9+ and pip. A Groq API key is needed for the AI summaries.
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/andrewsavio/DoomSphere-HealthGuardAI.git
 cd DoomSphere-HealthGuardAI
 
-# Install dependencies
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Start the server
+export GROQ_API_KEY=your_key     # Windows PowerShell: $env:GROQ_API_KEY="your_key"
 python server.py
 ```
 
-### Usage
+Open http://localhost:5000, upload a scan, and click **Analyze**.
 
-1. Open your browser at **http://localhost:5000**
-2. Upload any medical scan image (X-Ray, MRI, CT, etc.)
-3. Click **"Analyze Scan"**
-4. View results with heatmaps and annotated regions
-5. Download the comprehensive PDF report
+## Configuration
 
-## 🏗️ Architecture
+The server reads these environment variables. The names are the ones `server.py` uses.
+
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `GROQ_API_KEY` | AI summaries and findings | Yes, for AI text |
+| `groq_insurance` | Groq key for the insurance module | Only for insurance features |
+| `project_url` | Supabase project URL, for storing scan results | Optional |
+| `anon_key` | Supabase anon key | Optional |
+
+Keep keys in environment variables or a local `.env` file. Don't commit them.
+
+## Project layout
 
 ```
-DoomSphere-HealthGuardAI/
-├── server.py                   # Flask API server
-├── requirements.txt            # Python dependencies
-├── backend/
-│   ├── __init__.py
-│   ├── scan_classifier.py      # Scan type classification
-│   ├── analyzer.py             # DenseNet-121 + Hi-Res CAM analysis
-│   └── report_generator.py     # PDF report generation
-├── frontend/
-│   ├── index.html              # Main UI
-│   ├── styles.css              # Premium dark theme CSS
-│   └── app.js                  # Frontend logic
-├── uploads/                    # Uploaded scan storage
-├── results/                    # Analysis output images
-└── reports/                    # Generated PDF reports
+server.py                 # Flask app and API routes
+backend/
+├── analyzer.py           # DenseNet-121, Grad-CAM, findings and summaries
+├── scan_classifier.py    # scan-type detection
+└── report_generator.py   # PDF reports
+frontend/                 # HTML and JavaScript pages served by Flask
+chatbot_app/              # Flutter app (patient and doctor)
+models/                   # saved classifier weights
+requirements.txt
 ```
 
-## 🔬 How It Works
+## Model and limitations
 
-1. **Upload** — User uploads a medical scan image
-2. **Classify** — Image features are extracted to identify scan type
-3. **Analyze** — DenseNet-121 processes the image for medical findings
-4. **Visualize** — Hi-Res CAM generates heatmaps; contours mark regions of interest
-5. **Report** — Comprehensive PDF report is generated
+- The DenseNet-121 backbone starts from ImageNet weights. This repository contains no medical training dataset.
+- Findings and summaries come from LLM API calls. They have not been checked against clinical ground truth.
+- No accuracy or sensitivity figures are reported here. Evaluate the system on labelled data before relying on it.
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This is an **AI-assisted analysis tool** and is **NOT** a substitute for professional medical diagnosis. Always consult qualified healthcare professionals for medical decisions.
 
-## 📝 License
+## License
 
 MIT License — © 2026 DoomSphere
-
----
-
-
