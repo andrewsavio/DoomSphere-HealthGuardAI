@@ -181,13 +181,74 @@ def serve_static(path):
 
 @app.route("/api/config", methods=["GET"])
 def get_config():
-    """Exposes public/safe configuration variables to the frontend JS."""
+    """Exposes public configuration to the frontend JS. Never returns API secrets."""
     return jsonify({
         "supabase_url": SUPABASE_URL or os.getenv("SUPABASE_URL", ""),
         "supabase_anon_key": SUPABASE_KEY or os.getenv("SUPABASE_ANON_KEY", ""),
-        "groq_api_key": os.getenv("GROQ_API_KEY", ""),
-        "groq_insurance_key": os.getenv("groq_insurance", os.getenv("GROQ_INSURANCE_KEY", ""))
     })
+
+
+GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_CHAT_MODEL = "llama-3.3-70b-versatile"
+GROQ_MAX_MESSAGES = 20
+GROQ_MAX_CHARS = 40000
+
+
+def _groq_error(message, status):
+    return jsonify({"error": {"message": message}}), status
+
+
+@app.route("/api/groq/chat", methods=["POST"])
+def groq_chat_proxy():
+    """Forwards chat requests to Groq so the API key stays on the server.
+
+    Body: {"purpose": "chat" | "insurance", "messages": [...], "temperature": float, "max_tokens": int}
+    The model is fixed server-side. Callers cannot pick it or supply a key.
+    """
+    payload = request.get_json(silent=True) or {}
+    messages = payload.get("messages")
+
+    if not isinstance(messages, list) or not 1 <= len(messages) <= GROQ_MAX_MESSAGES:
+        return _groq_error(f"messages must be a list of 1 to {GROQ_MAX_MESSAGES} items", 400)
+    total_chars = 0
+    for message in messages:
+        if (not isinstance(message, dict)
+                or message.get("role") not in ("system", "user", "assistant")
+                or not isinstance(message.get("content"), str)):
+            return _groq_error("each message needs a role and string content", 400)
+        total_chars += len(message["content"])
+    if total_chars > GROQ_MAX_CHARS:
+        return _groq_error("messages are too long", 413)
+
+    try:
+        temperature = min(max(float(payload.get("temperature", 0.7)), 0.0), 1.0)
+        max_tokens = min(int(payload.get("max_tokens", 2048)), 4096)
+    except (TypeError, ValueError):
+        return _groq_error("temperature and max_tokens must be numbers", 400)
+
+    if payload.get("purpose") == "insurance":
+        api_key = os.getenv("groq_insurance") or os.getenv("GROQ_INSURANCE_KEY") or os.getenv("GROQ_API_KEY")
+    else:
+        api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return _groq_error("Groq API key is not configured on the server", 500)
+
+    try:
+        upstream = requests.post(
+            GROQ_CHAT_URL,
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={"model": GROQ_CHAT_MODEL, "messages": messages,
+                  "temperature": temperature, "max_tokens": max_tokens},
+            timeout=60,
+        )
+    except requests.RequestException:
+        return _groq_error("Could not reach the Groq API", 502)
+
+    try:
+        body = upstream.json()
+    except ValueError:
+        body = {"error": {"message": "Groq returned a non-JSON response"}}
+    return jsonify(body), upstream.status_code
 
 
 @app.route("/api/health", methods=["GET"])

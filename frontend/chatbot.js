@@ -39,21 +39,8 @@ if (insuranceContextParam) {
 
 // Configuration
 const CHAT_MODEL = 'claude-opus-4-6';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
-let GROQ_API_KEY = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Fetch API Key from backend securely for text-only fallbacks
-    try {
-        const response = await fetch('/api/config');
-        if (response.ok) {
-            const data = await response.json();
-            GROQ_API_KEY = data.groq_api_key;
-        }
-    } catch (err) {
-        console.error("Failed to load generic config for API keys", err);
-    }
-
     // Auto-message for insurance context
     if (currentInsuranceContext) {
         const initialContextMsg = `I am looking at the following insurance policy you recommended:
@@ -508,10 +495,6 @@ ${currentInsuranceContext ? `\n\n5. INSURANCE CONTEXT: The user is asking about 
 }
 
 async function sendGroqChatRequest(latestMessage) {
-    if (!GROQ_API_KEY) {
-        throw new Error("GROQ_API_KEY is missing. Groq requires backend configuration.");
-    }
-
     const currentLanguage = chatLanguageMenu ? chatLanguageMenu.value : 'English';
 
     const systemPrompt = `You are HealthGuard AI, a compassionate, knowledgeable healthcare assistant designed for patients in India. Your advice should be relevant to the Indian healthcare system. Your role:
@@ -528,14 +511,11 @@ ${currentInsuranceContext ? `\n\n5. INSURANCE CONTEXT: The user is asking about 
 
     messages.push({ role: 'user', content: latestMessage });
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('/api/groq/chat', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            model: GROQ_MODEL,
+            purpose: 'chat',
             messages: messages,
             temperature: 0.7,
             max_tokens: 2048

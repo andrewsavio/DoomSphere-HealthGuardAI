@@ -1226,22 +1226,13 @@ Format each recommendation exactly like this:
   }
 ]`;
 
-                let groqKey = window.AppConfig?.groq_insurance_key || window.AppConfig?.groq_api_key;
-
-                if (!groqKey) {
-                    throw new Error("No Groq API key configured. Cannot fetch recommendations.");
-                }
-
                 let rawResponse = '';
                 try {
-                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    const response = await fetch('/api/groq/chat', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${groqKey}`
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            model: 'llama-3.3-70b-versatile',
+                            purpose: 'insurance',
                             messages: [{ role: 'user', content: prompt }],
                             temperature: 0.2
                         })

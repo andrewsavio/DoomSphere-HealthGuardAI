@@ -148,30 +148,14 @@ Format each recommendation exactly like this:
 ]
 `;
 
-        let groqKey = '';
-        try {
-            const res = await fetch('/api/config');
-            const config = await res.json();
-            groqKey = config.groq_insurance_key || config.groq_api_key;
-        } catch (e) {
-            console.warn("Failed to fetch config, looking for fallback...", e);
-        }
-
-        if (!groqKey) {
-            throw new Error("No Groq API key configured. Please set groq_insurance or GROQ_API_KEY in .env");
-        }
-
         console.log("Requesting Groq API for Insurance...");
         let rawResponse = '';
         try {
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            const response = await fetch('/api/groq/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${groqKey}`
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile',
+                    purpose: 'insurance',
                     messages: [{ role: 'user', content: prompt }],
                     temperature: 0.2
                 })
