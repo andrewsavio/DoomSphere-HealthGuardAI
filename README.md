@@ -85,4 +85,4 @@ This is an **AI-assisted analysis tool** and is **NOT** a substitute for profess
 
 ## License
 
-MIT License — © 2026 DoomSphere
+MIT License — see [LICENSE](LICENSE). © 2026 Andrew Savio M.
